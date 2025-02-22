@@ -3,6 +3,9 @@ package commands
 import (
 	"fmt"
 	"strconv"
+	"strings"
+
+	"github.com/nsf/termbox-go"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage"
@@ -85,9 +88,57 @@ func (cmd *ListOrder) Execute(args []string) error {
 		orders = orders[len(orders)-int(lastOrdersNumber):]
 	}
 
-	for i, order := range orders {
-		fmt.Printf("%d) %s\n", i+1, order.String())
+	// for i, order := range orders {
+	// 	fmt.Printf("%d) %s\n", i+1, order.String())
+	// }
+
+	page, pageSize := 0, 3
+
+	err = termbox.Init()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		termbox.Close()
+	}()
+
+	printPage := func() {
+		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+		termbox.Flush()
+
+		fmt.Println(strings.Repeat("\n", 50))
+		fmt.Println(strings.Repeat("-", 200))
+
+		start := page * pageSize
+		end := start + pageSize
+		if end > len(orders) {
+			end = len(orders)
+		}
+
+		for i := start; i < end; i++ {
+			fmt.Println(orders[i].String())
+		}
+
+		fmt.Printf("\nUserID: %d | Page: %d/%d | 'w' - previous page | 's' - next page | Press 'q' to quit.\n", userID, page+1, (len(orders)+pageSize-1)/pageSize)
+		fmt.Println(strings.Repeat("-", 200))
 	}
 
-	return nil
+	printPage()
+	for {
+		switch ev := termbox.PollEvent(); ev.Ch {
+		case 's':
+			if (page+1)*pageSize < len(orders) {
+				page++
+				printPage()
+			}
+		case 'w':
+			if page > 0 {
+				page--
+				printPage()
+			}
+		case 'q':
+			return nil
+		default:
+		}
+	}
 }
