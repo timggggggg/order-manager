@@ -24,7 +24,7 @@ func (cmd *ListReturn) Execute(args []string) error {
 		return err
 	}
 
-	page, ordersPerPage := int64(1), int64(len(cmd.strg.Orders))
+	page, ordersPerPage := int64(1), int64(1)
 
 	pageTemp, exists := optionalArgs["p"]
 	if exists {
@@ -55,11 +55,11 @@ func (cmd *ListReturn) Execute(args []string) error {
 		}
 	}
 
-	if offset+ordersPerPage > int64(len(orders)) {
-		ordersPerPage = int64(len(orders)) - offset
+	if offset >= int64(len(orders)) {
+		return nil
 	}
 
-	orders = orders[offset : offset+ordersPerPage]
+	orders = orders[offset:min(int64(len(orders)), offset+ordersPerPage)]
 	for i, order := range orders {
 		fmt.Printf("%d) %s\n", i+1, order.String())
 	}
