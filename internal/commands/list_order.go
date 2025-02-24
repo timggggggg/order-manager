@@ -16,7 +16,6 @@ func ParseArgs(args []string) (map[string]string, error) {
 
 	for i := 0; i+1 < len(args); i++ {
 		if args[i][0] == '-' {
-
 			_, exists := result[args[i][1:]]
 			if exists {
 				return nil, models.ErrorInvalidOptionalArgs

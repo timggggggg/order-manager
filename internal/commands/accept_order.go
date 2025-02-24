@@ -2,6 +2,7 @@ package commands
 
 import (
 	"strconv"
+	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage"
@@ -44,7 +45,8 @@ func (cmd *AcceptOrder) Execute(args []string) error {
 		return models.ErrorNegativeFlag
 	}
 
-	order := storage.NewOrder(orderID, userID, storageDurationDays)
+	acceptTime := time.Now()
+	order := storage.NewOrder(orderID, userID, storageDurationDays, acceptTime)
 
 	err = cmd.strg.Add(order)
 	if err != nil {

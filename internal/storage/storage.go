@@ -8,7 +8,7 @@ import (
 )
 
 type Storage struct {
-	Orders   []*Order `json:"orders"`
+	Orders   []*Order
 	filePath string
 }
 

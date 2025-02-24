@@ -30,9 +30,7 @@ type Order struct {
 	IssueTime  time.Time   `json:"issue_time"`
 }
 
-func NewOrder(ID, userID, storageDurationDays int64) *Order {
-	acceptTime := time.Now()
-
+func NewOrder(ID, userID, storageDurationDays int64, acceptTime time.Time) *Order {
 	return &Order{
 		ID,
 		userID,
