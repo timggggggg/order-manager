@@ -8,7 +8,6 @@ import (
 	"github.com/nsf/termbox-go"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/internal/storage"
 )
 
 func ParseArgs(args []string) (map[string]string, error) {
@@ -27,11 +26,16 @@ func ParseArgs(args []string) (map[string]string, error) {
 	return result, nil
 }
 
-type ListOrder struct {
-	strg *storage.Storage
+type ListOrderStorage interface {
+	GetAllOrders() []*models.Order
+	GetSize() int64
 }
 
-func NewListOrder(strg *storage.Storage) *ListOrder {
+type ListOrder struct {
+	strg ListOrderStorage
+}
+
+func NewListOrder(strg ListOrderStorage) *ListOrder {
 	return &ListOrder{strg}
 }
 
@@ -54,7 +58,7 @@ func (cmd *ListOrder) Execute(args []string) error {
 		return err
 	}
 
-	lastOrdersNumber, currentOrderStatus := int64(len(cmd.strg.Orders)), storage.Default
+	lastOrdersNumber, currentOrderStatus := cmd.strg.GetSize(), models.Default
 
 	lastOrdersNumberTemp, exists := optionalArgs["n"]
 	if exists {
@@ -66,19 +70,19 @@ func (cmd *ListOrder) Execute(args []string) error {
 
 	currentOrderStatusTemp, exists := optionalArgs["s"]
 	if exists {
-		currentOrderStatus = storage.OrderStatus(currentOrderStatusTemp)
+		currentOrderStatus = models.OrderStatus(currentOrderStatusTemp)
 	}
 
-	ordersTemp := make([]*storage.Order, 0)
-	for _, order := range cmd.strg.Orders {
+	ordersTemp := make([]*models.Order, 0)
+	for _, order := range cmd.strg.GetAllOrders() {
 		if order.UserID == userID {
 			ordersTemp = append(ordersTemp, order)
 		}
 	}
 
-	orders := make([]*storage.Order, 0)
+	orders := make([]*models.Order, 0)
 	for _, order := range ordersTemp {
-		if currentOrderStatus == storage.Default || order.Status == currentOrderStatus {
+		if currentOrderStatus == models.Default || order.Status == currentOrderStatus {
 			orders = append(orders, order)
 		}
 	}

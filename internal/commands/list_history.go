@@ -5,14 +5,17 @@ import (
 	"sort"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/internal/storage"
 )
 
-type ListHistory struct {
-	strg *storage.Storage
+type ListHistoryStorage interface {
+	GetAllOrders() []*models.Order
 }
 
-func NewListHistory(strg *storage.Storage) *ListHistory {
+type ListHistory struct {
+	strg ListHistoryStorage
+}
+
+func NewListHistory(strg ListHistoryStorage) *ListHistory {
 	return &ListHistory{strg}
 }
 
@@ -21,9 +24,7 @@ func (cmd *ListHistory) Execute(args []string) error {
 		return models.ErrorInvalidNumberOfArgs
 	}
 
-	orders := make([]*storage.Order, 0)
-
-	orders = append(orders, cmd.strg.Orders...)
+	orders := cmd.strg.GetAllOrders()
 
 	// по убыванию времени последнего изменения
 	sort.Slice(orders, func(i, j int) bool {

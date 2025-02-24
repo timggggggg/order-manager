@@ -5,26 +5,29 @@ import (
 	"strconv"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/internal/storage"
 )
 
-type ListReturn struct {
-	strg *storage.Storage
+type ListReturnStorage interface {
+	GetAllOrders() []*models.Order
+	GetSize() int64
 }
 
-func NewListReturn(strg *storage.Storage) *ListReturn {
+type ListReturn struct {
+	strg ListReturnStorage
+}
+
+func NewListReturn(strg ListReturnStorage) *ListReturn {
 	return &ListReturn{strg}
 }
 
 func (cmd *ListReturn) Execute(args []string) error {
-
 	// -p page -c ordersPerPage
 	optionalArgs, err := ParseArgs(args)
 	if err != nil {
 		return err
 	}
 
-	page, ordersPerPage := int64(1), int64(1)
+	page, ordersPerPage := int64(1), int64(cmd.strg.GetSize())
 
 	pageTemp, exists := optionalArgs["p"]
 	if exists {
@@ -44,13 +47,13 @@ func (cmd *ListReturn) Execute(args []string) error {
 
 	offset := (page - 1) * ordersPerPage
 
-	if offset > int64(len(cmd.strg.Orders)) {
+	if offset > cmd.strg.GetSize() {
 		return models.ErrorInvalidOptionalArgs
 	}
 
-	orders := make([]*storage.Order, 0)
-	for _, order := range cmd.strg.Orders {
-		if order.Status == storage.Returned {
+	orders := make([]*models.Order, 0)
+	for _, order := range cmd.strg.GetAllOrders() {
+		if order.Status == models.Returned {
 			orders = append(orders, order)
 		}
 	}

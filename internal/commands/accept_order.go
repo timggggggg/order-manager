@@ -5,14 +5,17 @@ import (
 	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/internal/storage"
 )
 
-type AcceptOrder struct {
-	strg *storage.Storage
+type AcceptStorage interface {
+	Add(order *models.Order) error
 }
 
-func NewAcceptOrder(strg *storage.Storage) *AcceptOrder {
+type AcceptOrder struct {
+	strg AcceptStorage
+}
+
+func NewAcceptOrder(strg AcceptStorage) *AcceptOrder {
 	return &AcceptOrder{strg}
 }
 
@@ -46,7 +49,7 @@ func (cmd *AcceptOrder) Execute(args []string) error {
 	}
 
 	acceptTime := time.Now()
-	order := storage.NewOrder(orderID, userID, storageDurationDays, acceptTime)
+	order := models.NewOrder(orderID, userID, storageDurationDays, acceptTime)
 
 	err = cmd.strg.Add(order)
 	if err != nil {

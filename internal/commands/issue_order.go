@@ -6,14 +6,18 @@ import (
 	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/internal/storage"
 )
 
-type IssueOrder struct {
-	strg *storage.Storage
+type IssueStorage interface {
+	Save() error
+	GetByID(id int64) (*models.Order, error)
 }
 
-func NewIssueOrder(strg *storage.Storage) *IssueOrder {
+type IssueOrder struct {
+	strg IssueStorage
+}
+
+func NewIssueOrder(strg IssueStorage) *IssueOrder {
 	return &IssueOrder{strg}
 }
 
@@ -30,7 +34,7 @@ func (cmd *IssueOrder) Execute(args []string) error {
 		return models.ErrorNegativeFlag
 	}
 
-	orders := make([]*storage.Order, 0)
+	orders := make([]*models.Order, 0)
 
 	for i := 1; i < len(args)-1; i++ {
 		orderID, err := strconv.ParseInt(args[i], 10, 64)
@@ -71,7 +75,7 @@ func (cmd *IssueOrder) Execute(args []string) error {
 			}
 
 			order.IssueTime = timeNow
-			order.Status = storage.Issued
+			order.Status = models.Issued
 			fmt.Printf("Order %d issued!\n", order.ID)
 		}
 		return cmd.strg.Save()
@@ -80,19 +84,19 @@ func (cmd *IssueOrder) Execute(args []string) error {
 		for _, order := range orders {
 			timeNow := time.Now()
 
-			if order.IssueTime == storage.DefaultTime {
+			if order.IssueTime == models.DefaultTime {
 				fmt.Printf("Order %d was not issued\n", order.ID)
 				continue
 			}
 
-			returnDeadline := order.IssueTime.Add(storage.MaxReturnTime)
+			returnDeadline := order.IssueTime.Add(models.MaxReturnTime)
 
 			if timeNow.After(returnDeadline) {
 				fmt.Printf("Order %d cannot be returned\n", order.ID)
 				continue
 			}
 
-			order.Status = storage.Returned
+			order.Status = models.Returned
 			fmt.Printf("Order %d returned!\n", order.ID)
 		}
 		return cmd.strg.Save()

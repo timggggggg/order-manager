@@ -1,18 +1,23 @@
 package commands
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/internal/storage"
 )
 
-type ReturnOrder struct {
-	strg *storage.Storage
+type ReturnStorage interface {
+	GetByID(id int64) (*models.Order, error)
+	DeleteByID(id int64) error
 }
 
-func NewReturnOrder(strg *storage.Storage) *ReturnOrder {
+type ReturnOrder struct {
+	strg ReturnStorage
+}
+
+func NewReturnOrder(strg ReturnStorage) *ReturnOrder {
 	return &ReturnOrder{strg}
 }
 
@@ -38,11 +43,12 @@ func (cmd *ReturnOrder) Execute(args []string) error {
 		return models.ErrorOrderNotExpired
 	}
 
-	if order.Status == storage.Issued {
+	if order.Status == models.Issued {
 		return models.ErrorOrderAlreadyIssued
 	}
 
 	cmd.strg.DeleteByID(orderID)
+	fmt.Printf("Order %d returned to courier!\n", orderID)
 
 	return nil
 }
