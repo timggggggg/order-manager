@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -55,6 +56,8 @@ func (cmd *AcceptOrder) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("Order %d accepted!\n", orderID)
 
 	return nil
 }

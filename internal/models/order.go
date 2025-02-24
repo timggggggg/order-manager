@@ -22,12 +22,12 @@ var (
 )
 
 type Order struct {
-	ID         int64       `json:"id"`
-	UserID     int64       `json:"user_id"`
-	Status     OrderStatus `json:"status"`
-	AcceptTime time.Time   `json:"accept_time"`
-	ExpireTime time.Time   `json:"expire_time"`
-	IssueTime  time.Time   `json:"issue_time"`
+	ID         int64
+	UserID     int64
+	Status     OrderStatus
+	AcceptTime time.Time
+	ExpireTime time.Time
+	IssueTime  time.Time
 }
 
 func NewOrder(ID, userID, storageDurationDays int64, acceptTime time.Time) *Order {

@@ -18,10 +18,15 @@ func NewStorage(filePath string) (*Storage, error) {
 		return nil, err
 	}
 
-	orders := make([]*models.Order, 0)
-	err = json.Unmarshal(file, &orders)
+	ordersDTO := make([]*OrderDTO, 0)
+	err = json.Unmarshal(file, &ordersDTO)
 	if err != nil {
 		return nil, err
+	}
+
+	var orders []*models.Order
+	for _, d := range ordersDTO {
+		orders = append(orders, FromDTO(d))
 	}
 
 	st := &Storage{
@@ -39,7 +44,12 @@ func (s *Storage) Save() error {
 	}
 	defer file.Close()
 
-	orders, err := json.MarshalIndent(s.orders, "", "\t")
+	var ordersDTO []*OrderDTO
+	for _, o := range s.orders {
+		ordersDTO = append(ordersDTO, ToDTO(o))
+	}
+
+	orders, err := json.MarshalIndent(ordersDTO, "", "\t")
 	if err != nil {
 		return err
 	}
