@@ -53,7 +53,7 @@ func (cmd *ListReturn) Execute(args []string) error {
 
 	orders := make([]*models.Order, 0)
 	for _, order := range cmd.strg.GetAllOrders() {
-		if order.Status == models.Returned {
+		if order.Status == models.StatusReturned {
 			orders = append(orders, order)
 		}
 	}

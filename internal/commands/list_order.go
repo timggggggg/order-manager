@@ -58,7 +58,7 @@ func (cmd *ListOrder) Execute(args []string) error {
 		return err
 	}
 
-	lastOrdersNumber, currentOrderStatus := cmd.strg.GetSize(), models.Default
+	lastOrdersNumber, currentOrderStatus := cmd.strg.GetSize(), models.StatusDefault
 
 	lastOrdersNumberTemp, exists := optionalArgs["n"]
 	if exists {
@@ -82,7 +82,7 @@ func (cmd *ListOrder) Execute(args []string) error {
 
 	orders := make([]*models.Order, 0)
 	for _, order := range ordersTemp {
-		if currentOrderStatus == models.Default || order.Status == currentOrderStatus {
+		if currentOrderStatus == models.StatusDefault || order.Status == currentOrderStatus {
 			orders = append(orders, order)
 		}
 	}

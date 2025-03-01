@@ -13,4 +13,6 @@ var (
 	ErrorInvalidNumberOfArgs = errors.New("invalid number of args")
 	ErrorInvalidIssueMode    = errors.New("issue mode can only be 0 or 1")
 	ErrorInvalidOptionalArgs = errors.New("invalid optional args")
+
+	ErrorPackagingFilmTwice = errors.New("cannot pack with film twice")
 )

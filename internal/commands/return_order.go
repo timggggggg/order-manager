@@ -43,7 +43,7 @@ func (cmd *ReturnOrder) Execute(args []string) error {
 		return models.ErrorOrderNotExpired
 	}
 
-	if order.Status == models.Issued {
+	if order.Status == models.StatusIssued {
 		return models.ErrorOrderAlreadyIssued
 	}
 

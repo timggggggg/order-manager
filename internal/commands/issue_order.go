@@ -75,7 +75,7 @@ func (cmd *IssueOrder) Execute(args []string) error {
 			}
 
 			order.IssueTime = timeNow
-			order.Status = models.Issued
+			order.Status = models.StatusIssued
 			fmt.Printf("Order %d issued!\n", order.ID)
 		}
 		return cmd.strg.Save()
@@ -96,7 +96,7 @@ func (cmd *IssueOrder) Execute(args []string) error {
 				continue
 			}
 
-			order.Status = models.Returned
+			order.Status = models.StatusReturned
 			fmt.Printf("Order %d returned!\n", order.ID)
 		}
 		return cmd.strg.Save()

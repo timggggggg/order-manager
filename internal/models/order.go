@@ -8,11 +8,11 @@ import (
 type OrderStatus string
 
 const (
-	Default  OrderStatus = ""
-	Accepted OrderStatus = "accepted"
-	Expired  OrderStatus = "expired"
-	Issued   OrderStatus = "issued"
-	Returned OrderStatus = "returned"
+	StatusDefault  OrderStatus = ""
+	StatusAccepted OrderStatus = "accepted"
+	StatusExpired  OrderStatus = "expired"
+	StatusIssued   OrderStatus = "issued"
+	StatusReturned OrderStatus = "returned"
 
 	MaxReturnTime = time.Hour * 48
 )
@@ -22,35 +22,43 @@ var (
 )
 
 type Order struct {
-	ID         int64
-	UserID     int64
-	Status     OrderStatus
-	AcceptTime time.Time
-	ExpireTime time.Time
-	IssueTime  time.Time
+	ID           int64
+	UserID       int64
+	Status       OrderStatus
+	AcceptTime   time.Time
+	ExpireTime   time.Time
+	IssueTime    time.Time
+	Weight       float64
+	Cost         float64
+	Package      PackagingType
+	ExtraPackage PackagingType
 }
 
-func NewOrder(ID, userID, storageDurationDays int64, acceptTime time.Time) *Order {
+func NewOrder(ID, userID, storageDurationDays int64, acceptTime time.Time, weight, cost float64, pack, extraPack PackagingType) *Order {
 	return &Order{
 		ID,
 		userID,
-		Accepted,
+		StatusAccepted,
 		acceptTime,
 		acceptTime.AddDate(0, 0, int(storageDurationDays)),
 		DefaultTime,
+		weight,
+		cost,
+		pack,
+		extraPack,
 	}
 }
 
 func (o *Order) String() string {
 	return fmt.Sprintf(
-		"Order(ID=%d, UserID=%d, Status=%s, AcceptTime=%s, ExpireTime=%s, IssueTime=%s)",
-		o.ID, o.UserID, o.Status, formatTime(o.AcceptTime), formatTime(o.ExpireTime), formatTime(o.IssueTime),
+		"\t Order(ID=%d, UserID=%d, Status=%s,\n\t AcceptTime=%s, ExpireTime=%s, IssueTime=%s,\n\t Weight=%f, Cost=%f, Packaging=%s, ExtraPackaging=%s)",
+		o.ID, o.UserID, o.Status, formatTime(o.AcceptTime), formatTime(o.ExpireTime), formatTime(o.IssueTime), o.Weight, o.Cost, o.Package, o.ExtraPackage,
 	)
 }
 
 func (o *Order) LastStatusSwitchTime() time.Time {
 	maxTime := o.AcceptTime
-	if o.Status == Expired && o.ExpireTime.After(maxTime) {
+	if o.Status == StatusExpired && o.ExpireTime.After(maxTime) {
 		maxTime = o.ExpireTime
 	}
 	if o.IssueTime.After(maxTime) {
