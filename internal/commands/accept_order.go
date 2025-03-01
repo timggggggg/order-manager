@@ -26,45 +26,21 @@ func (cmd *AcceptOrder) Execute(args []string) error {
 		return models.ErrorInvalidNumberOfArgs
 	}
 
-	orderID, err := strconv.ParseInt(args[0], 10, 64)
+	iargs, err := parseInts(args[0], args[1], args[2])
 	if err != nil {
 		return err
-	}
-	if orderID <= 0 {
-		return models.ErrorNegativeFlag
 	}
 
-	userID, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		return err
-	}
-	if userID <= 0 {
-		return models.ErrorNegativeFlag
-	}
+	orderID := iargs[0]
+	userID := iargs[1]
+	storageDurationDays := iargs[2]
 
-	storageDurationDays, err := strconv.ParseInt(args[2], 10, 64)
+	fargs, err := parseFloat(args[3], args[4])
 	if err != nil {
 		return err
 	}
-	if storageDurationDays <= 0 {
-		return models.ErrorNegativeFlag
-	}
-
-	weight, err := strconv.ParseFloat(args[3], 64)
-	if err != nil {
-		return err
-	}
-	if weight <= 0 {
-		return models.ErrorNegativeFlag
-	}
-
-	cost, err := strconv.ParseFloat(args[4], 64)
-	if err != nil {
-		return err
-	}
-	if cost <= 0 {
-		return models.ErrorNegativeFlag
-	}
+	weight := fargs[0]
+	cost := fargs[1]
 
 	// -p packaging -ep extraPackaging
 	optionalArgs, err := ParseArgs(args)
@@ -77,10 +53,7 @@ func (cmd *AcceptOrder) Execute(args []string) error {
 		pack = "film"
 	}
 
-	extraPack, exists := optionalArgs["ep"]
-	if !exists {
-		extraPack = ""
-	}
+	extraPack := optionalArgs["ep"]
 
 	packagingStrategy, err := packaging.NewPackagingStrategy(pack, packaging.PackagingStrategies)
 	if err != nil {
@@ -127,4 +100,36 @@ func validatePackaging(order *models.Order, packagingStrategy packaging.Strategy
 	}
 
 	return packageCost + extraPackageCost, nil
+}
+
+func parseInts(args ...string) ([]int64, error) {
+	result := make([]int64, 0)
+
+	for _, s := range args {
+		ch, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		if ch <= 0 {
+			return nil, models.ErrorNegativeFlag
+		}
+		result = append(result, ch)
+	}
+	return result, nil
+}
+
+func parseFloat(args ...string) ([]float64, error) {
+	result := make([]float64, 0)
+
+	for _, s := range args {
+		ch, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return nil, err
+		}
+		if ch <= 0 {
+			return nil, models.ErrorNegativeFlag
+		}
+		result = append(result, ch)
+	}
+	return result, nil
 }

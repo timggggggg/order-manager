@@ -51,12 +51,7 @@ func (cmd *ListReturn) Execute(args []string) error {
 		return models.ErrorInvalidOptionalArgs
 	}
 
-	orders := make([]*models.Order, 0)
-	for _, order := range cmd.strg.GetAllOrders() {
-		if order.Status == models.StatusReturned {
-			orders = append(orders, order)
-		}
-	}
+	orders := filterOrders(cmd.strg.GetAllOrders(), 0, models.StatusReturned)
 
 	if offset >= int64(len(orders)) {
 		return nil

@@ -34,15 +34,39 @@ func (cmd *IssueOrder) Execute(args []string) error {
 		return models.ErrorNegativeFlag
 	}
 
-	orders := make([]*models.Order, 0)
+	orders, err := getCorrectOrders(cmd, userID, args)
+	if err != nil {
+		return err
+	}
 
+	mode, err := strconv.ParseInt(args[len(args)-1], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	switch mode {
+	case 0:
+		// выдать заказы
+		handleIssue(orders)
+		return cmd.strg.Save()
+	case 1:
+		// принять возвраты
+		handleReturn(orders)
+		return cmd.strg.Save()
+	default:
+		return models.ErrorInvalidIssueMode
+	}
+}
+
+func getCorrectOrders(cmd *IssueOrder, userID int64, args []string) ([]*models.Order, error) {
+	orders := make([]*models.Order, 0)
 	for i := 1; i < len(args)-1; i++ {
 		orderID, err := strconv.ParseInt(args[i], 10, 64)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if orderID <= 0 {
-			return models.ErrorNegativeFlag
+			return nil, models.ErrorNegativeFlag
 		}
 
 		order, err := cmd.strg.GetByID(orderID)
@@ -56,51 +80,42 @@ func (cmd *IssueOrder) Execute(args []string) error {
 		}
 		orders = append(orders, order)
 	}
+	return orders, nil
+}
 
-	mode, err := strconv.ParseInt(args[len(args)-1], 10, 64)
-	if err != nil {
-		return err
+func handleIssue(orders []*models.Order) {
+	for _, order := range orders {
+		timeNow := time.Now()
+
+		if timeNow.After(order.ExpireTime) {
+			// order.Status = storage.Expired
+			fmt.Printf("Order %d expired\n", order.ID)
+			continue
+		}
+
+		order.IssueTime = timeNow
+		order.Status = models.StatusIssued
+		fmt.Printf("Order %d issued!\n", order.ID)
 	}
+}
 
-	switch mode {
-	case 0:
-		// выдать заказы
-		for _, order := range orders {
-			timeNow := time.Now()
+func handleReturn(orders []*models.Order) {
+	for _, order := range orders {
+		timeNow := time.Now()
 
-			if timeNow.After(order.ExpireTime) {
-				// order.Status = storage.Expired
-				fmt.Printf("Order %d expired\n", order.ID)
-				continue
-			}
-
-			order.IssueTime = timeNow
-			order.Status = models.StatusIssued
-			fmt.Printf("Order %d issued!\n", order.ID)
+		if order.IssueTime == models.DefaultTime {
+			fmt.Printf("Order %d was not issued\n", order.ID)
+			continue
 		}
-		return cmd.strg.Save()
-	case 1:
-		// принять возвраты
-		for _, order := range orders {
-			timeNow := time.Now()
 
-			if order.IssueTime == models.DefaultTime {
-				fmt.Printf("Order %d was not issued\n", order.ID)
-				continue
-			}
+		returnDeadline := order.IssueTime.Add(models.MaxReturnTime)
 
-			returnDeadline := order.IssueTime.Add(models.MaxReturnTime)
-
-			if timeNow.After(returnDeadline) {
-				fmt.Printf("Order %d cannot be returned\n", order.ID)
-				continue
-			}
-
-			order.Status = models.StatusReturned
-			fmt.Printf("Order %d returned!\n", order.ID)
+		if timeNow.After(returnDeadline) {
+			fmt.Printf("Order %d cannot be returned\n", order.ID)
+			continue
 		}
-		return cmd.strg.Save()
-	default:
-		return models.ErrorInvalidIssueMode
+
+		order.Status = models.StatusReturned
+		fmt.Printf("Order %d returned!\n", order.ID)
 	}
 }
