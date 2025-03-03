@@ -43,5 +43,5 @@ func (m *Money) Add(otherAmount int64) {
 }
 
 func (m *Money) String() string {
-	return fmt.Sprintf("%d.%d", m.Amount/100, m.Amount%100)
+	return fmt.Sprintf("%d.%02d", m.Amount/100, m.Amount%100)
 }
