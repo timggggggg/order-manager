@@ -26,21 +26,10 @@ func (cmd *AcceptOrder) Execute(args []string) error {
 		return models.ErrorInvalidNumberOfArgs
 	}
 
-	iargs, err := parseInts(args[0], args[1], args[2])
+	orderID, userID, storageDurationDays, weight, cost, err := parseOrderDetails(args)
 	if err != nil {
 		return err
 	}
-
-	orderID := iargs[0]
-	userID := iargs[1]
-	storageDurationDays := iargs[2]
-
-	fargs, err := parseFloat(args[3], args[4])
-	if err != nil {
-		return err
-	}
-	weight := fargs[0]
-	cost := fargs[1]
 
 	// -p packaging -ep extraPackaging
 	optionalArgs, err := ParseArgs(args)
@@ -73,7 +62,7 @@ func (cmd *AcceptOrder) Execute(args []string) error {
 		return fmt.Errorf("error accepting order: %w", err)
 	}
 
-	order.Cost += packageCost
+	order.Cost.Add(packageCost.Amount)
 
 	err = cmd.strg.Add(order)
 	if err != nil {
@@ -85,21 +74,42 @@ func (cmd *AcceptOrder) Execute(args []string) error {
 	return nil
 }
 
-func validatePackaging(order *models.Order, packagingStrategy packaging.Strategy, extraPackagingStrategy packaging.Strategy) (float64, error) {
+func parseOrderDetails(args []string) (int64, int64, int64, float64, *models.Money, error) {
+	iargs, err := parseInts(args[0], args[1], args[2])
+	if err != nil {
+		return 0, 0, 0, 0, nil, err
+	}
+
+	fargs, err := parseFloat(args[3])
+	if err != nil {
+		return 0, 0, 0, 0, nil, err
+	}
+
+	cost, err := models.NewMoney(args[4])
+	if err != nil {
+		return 0, 0, 0, 0, nil, err
+	}
+
+	return iargs[0], iargs[1], iargs[2], fargs[0], cost, nil
+}
+
+func validatePackaging(order *models.Order, packagingStrategy packaging.Strategy, extraPackagingStrategy packaging.Strategy) (*models.Money, error) {
 	if packagingStrategy.Type() == models.PackagingFilm && extraPackagingStrategy.Type() == models.PackagingFilm {
-		return 0, models.ErrorPackagingFilmTwice
+		return &models.Money{Amount: 0}, models.ErrorPackagingFilmTwice
 	}
 
 	packageCost, err := packagingStrategy.CalculateCost(order.Weight)
 	if err != nil {
-		return 0, err
+		return &models.Money{Amount: 0}, err
 	}
 	extraPackageCost, err := extraPackagingStrategy.CalculateCost(order.Weight)
 	if err != nil {
-		return 0, err
+		return &models.Money{Amount: 0}, err
 	}
 
-	return packageCost + extraPackageCost, nil
+	packageCost.Add(extraPackageCost.Amount)
+
+	return packageCost, nil
 }
 
 func parseInts(args ...string) ([]int64, error) {

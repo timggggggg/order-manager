@@ -29,12 +29,12 @@ type Order struct {
 	ExpireTime   time.Time
 	IssueTime    time.Time
 	Weight       float64
-	Cost         float64
+	Cost         *Money
 	Package      PackagingType
 	ExtraPackage PackagingType
 }
 
-func NewOrder(ID, userID, storageDurationDays int64, acceptTime time.Time, weight, cost float64, pack, extraPack PackagingType) *Order {
+func NewOrder(ID, userID, storageDurationDays int64, acceptTime time.Time, weight float64, cost *Money, pack, extraPack PackagingType) *Order {
 	return &Order{
 		ID,
 		userID,
@@ -51,8 +51,8 @@ func NewOrder(ID, userID, storageDurationDays int64, acceptTime time.Time, weigh
 
 func (o *Order) String() string {
 	return fmt.Sprintf(
-		"\t Order(ID=%d, UserID=%d, Status=%s,\n\t AcceptTime=%s, ExpireTime=%s, IssueTime=%s,\n\t Weight=%f, Cost=%f, Packaging=%s, ExtraPackaging=%s)",
-		o.ID, o.UserID, o.Status, formatTime(o.AcceptTime), formatTime(o.ExpireTime), formatTime(o.IssueTime), o.Weight, o.Cost, o.Package, o.ExtraPackage,
+		"\t Order(ID=%d, UserID=%d, Status=%s,\n\t AcceptTime=%s, ExpireTime=%s, IssueTime=%s,\n\t Weight=%f, Cost=%s, Packaging=%s, ExtraPackaging=%s)",
+		o.ID, o.UserID, o.Status, formatTime(o.AcceptTime), formatTime(o.ExpireTime), formatTime(o.IssueTime), o.Weight, o.Cost.String(), o.Package, o.ExtraPackage,
 	)
 }
 

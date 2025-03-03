@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	BoxCost      = 20.0
+	BoxCost      = 20
 	BoxMaxWeight = 30.0
 )
 
@@ -15,12 +15,12 @@ var ErrorBoxPackaging = fmt.Errorf("box is only available for orders under %.2f 
 
 type BoxPackaging struct{}
 
-func (b *BoxPackaging) CalculateCost(weight float64) (float64, error) {
+func (b *BoxPackaging) CalculateCost(weight float64) (*models.Money, error) {
 	if weight >= BoxMaxWeight {
-		return 0, ErrorBoxPackaging
+		return &models.Money{Amount: 0}, ErrorBoxPackaging
 	}
 
-	return BoxCost, nil
+	return &models.Money{Amount: BoxCost}, nil
 }
 
 func (b *BoxPackaging) Type() models.PackagingType {

@@ -14,7 +14,7 @@ type OrderDTO struct {
 	ExpireTime   time.Time `json:"expire_time"`
 	IssueTime    time.Time `json:"issue_time,omitempty"`
 	Weight       float64   `json:"weight"`
-	Cost         float64   `json:"cost"`
+	Cost         string    `json:"cost"`
 	Package      string    `json:"package"`
 	ExtraPackage string    `json:"extra_package,omitempty"`
 }
@@ -28,13 +28,15 @@ func ToDTO(o *models.Order) *OrderDTO {
 		ExpireTime:   o.ExpireTime,
 		IssueTime:    o.IssueTime,
 		Weight:       o.Weight,
-		Cost:         o.Cost,
+		Cost:         o.Cost.String(),
 		Package:      string(o.Package),
 		ExtraPackage: string(o.ExtraPackage),
 	}
 }
 
 func FromDTO(d *OrderDTO) *models.Order {
+	cost, _ := models.NewMoney(d.Cost)
+
 	return &models.Order{
 		ID:           d.ID,
 		UserID:       d.UserID,
@@ -43,7 +45,7 @@ func FromDTO(d *OrderDTO) *models.Order {
 		ExpireTime:   d.ExpireTime,
 		IssueTime:    d.IssueTime,
 		Weight:       d.Weight,
-		Cost:         d.Cost,
+		Cost:         cost,
 		Package:      models.PackagingType(d.Package),
 		ExtraPackage: models.PackagingType(d.ExtraPackage),
 	}

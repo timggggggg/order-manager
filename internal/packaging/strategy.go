@@ -7,7 +7,7 @@ import (
 )
 
 type Strategy interface {
-	CalculateCost(weight float64) (float64, error)
+	CalculateCost(weight float64) (*models.Money, error)
 	Type() models.PackagingType
 }
 

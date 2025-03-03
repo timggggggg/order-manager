@@ -5,13 +5,13 @@ import (
 )
 
 const (
-	DefaultCost = 0.0
+	DefaultCost = 0
 )
 
 type DefaultPackaging struct{}
 
-func (b *DefaultPackaging) CalculateCost(weight float64) (float64, error) {
-	return DefaultCost, nil
+func (b *DefaultPackaging) CalculateCost(weight float64) (*models.Money, error) {
+	return &models.Money{Amount: DefaultCost}, nil
 }
 
 func (b *DefaultPackaging) Type() models.PackagingType {

@@ -5,13 +5,13 @@ import (
 )
 
 const (
-	FilmCost = 1.0
+	FilmCost = 1
 )
 
 type FilmPackaging struct{}
 
-func (b *FilmPackaging) CalculateCost(weight float64) (float64, error) {
-	return FilmCost, nil
+func (b *FilmPackaging) CalculateCost(weight float64) (*models.Money, error) {
+	return &models.Money{Amount: FilmCost}, nil
 }
 
 func (b *FilmPackaging) Type() models.PackagingType {
