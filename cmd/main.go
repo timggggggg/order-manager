@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	filePath := flag.String("filepath", "storage.json", "path to storage file")
+	filePath := flag.String("filepath", "./cmd/storage.json", "path to storage file")
 
 	flag.Parse()
 

@@ -21,7 +21,7 @@ func (cmd *HelpCommand) Execute(args []string) error {
 	}
 
 	fmt.Println("usage:")
-	fmt.Println("\t- accept <orderID> <userID> <storageDurationDays>")
+	fmt.Println("\t- accept <orderID> <userID> <storageDurationDays> <weight> <cost> [-p <packaging>] [-ep <extraPackaging>]")
 	fmt.Println("\t- return <orderID>")
 	fmt.Println("\t- issue <userID> <orderID1> <orderID2> ... <mode>=0/1")
 	fmt.Println("\t- list_order <userID> [-n <lastOrdersNumber>] [-s <currentOrderStatus>]")
