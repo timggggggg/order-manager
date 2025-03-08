@@ -1,14 +1,16 @@
 package commands
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
 	"strconv"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
 type ListOrderStorage interface {
-	GetAllOrders() []*models.Order
-	GetSize() int64
+	GetByUserIDCursorPagination(ctx context.Context, userID int64, limit int64, cursorID int64) (models.OrdersSliceStorage, error)
 }
 
 type ListOrder struct {
@@ -19,68 +21,55 @@ func NewListOrder(strg ListOrderStorage) *ListOrder {
 	return &ListOrder{strg}
 }
 
-func (cmd *ListOrder) Execute(args []string) error {
-	if len(args) < 1 {
-		return models.ErrorInvalidNumberOfArgs
+func (cmd *ListOrder) Execute(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userIDstr := r.URL.Query().Get("user_id")
+	if userIDstr == "" {
+		http.Error(w, "", http.StatusBadRequest)
+		return
 	}
 
-	userID, err := strconv.ParseInt(args[0], 10, 64)
+	limitstr := r.URL.Query().Get("limit")
+	if limitstr == "" {
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+
+	cursorIDstr := r.URL.Query().Get("cursor_id")
+	if cursorIDstr == "" {
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.ParseInt(userIDstr, 10, 64)
 	if err != nil {
-		return err
-	}
-	if userID <= 0 {
-		return models.ErrorNegativeFlag
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	// -n lastOrdersNumber -s currentOrderStatus
-	optionalArgs, err := ParseArgs(args)
+	limit, err := strconv.ParseInt(limitstr, 10, 64)
 	if err != nil {
-		return err
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	lastOrdersNumber, currentOrderStatus := cmd.strg.GetSize(), models.StatusDefault
-
-	lastOrdersNumberTemp, exists := optionalArgs["n"]
-	if exists {
-		lastOrdersNumber, err = strconv.ParseInt(lastOrdersNumberTemp, 10, 64)
-		if err != nil {
-			return models.ErrorInvalidOptionalArgs
-		}
-	}
-
-	currentOrderStatusTemp, exists := optionalArgs["s"]
-	if exists {
-		currentOrderStatus = models.OrderStatus(currentOrderStatusTemp)
-	}
-
-	orders := filterOrders(cmd.strg.GetAllOrders(), userID, currentOrderStatus)
-
-	if int(lastOrdersNumber) < len(orders) {
-		orders = orders[len(orders)-int(lastOrdersNumber):]
-	}
-
-	err = performPagination(userID, orders)
+	cursorID, err := strconv.ParseInt(cursorIDstr, 10, 64)
 	if err != nil {
-		return err
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	return nil
-}
-
-func filterOrders(orders []*models.Order, userID int64, currentOrderStatus models.OrderStatus) []*models.Order {
-	ordersTemp := make([]*models.Order, 0)
-	for _, order := range orders {
-		if userID == 0 || order.UserID == userID {
-			ordersTemp = append(ordersTemp, order)
-		}
+	orders, err := cmd.strg.GetByUserIDCursorPagination(ctx, userID, limit, cursorID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	result := make([]*models.Order, 0)
-	for _, order := range ordersTemp {
-		if currentOrderStatus == models.StatusDefault || order.Status == currentOrderStatus {
-			orders = append(orders, order)
-		}
+	err = json.NewEncoder(w).Encode(orders)
+	if err != nil {
+		return
 	}
 
-	return result
+	w.WriteHeader(http.StatusOK)
 }

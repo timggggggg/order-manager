@@ -1,15 +1,16 @@
 package commands
 
 import (
-	"fmt"
+	"context"
+	"encoding/json"
+	"net/http"
 	"strconv"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
 type ListReturnStorage interface {
-	GetAllOrders() []*models.Order
-	GetSize() int64
+	GetReturnsLimitOffsetPagination(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error)
 }
 
 type ListReturn struct {
@@ -20,47 +21,43 @@ func NewListReturn(strg ListReturnStorage) *ListReturn {
 	return &ListReturn{strg}
 }
 
-func (cmd *ListReturn) Execute(args []string) error {
-	// -p page -c ordersPerPage
-	optionalArgs, err := ParseArgs(args)
+func (cmd *ListReturn) Execute(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	limitstr := r.URL.Query().Get("limit")
+	if limitstr == "" {
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+
+	offsetstr := r.URL.Query().Get("offset")
+	if offsetstr == "" {
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+
+	limit, err := strconv.ParseInt(limitstr, 10, 64)
 	if err != nil {
-		return err
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	page, ordersPerPage := int64(1), int64(cmd.strg.GetSize())
-
-	pageTemp, exists := optionalArgs["p"]
-	if exists {
-		page, err = strconv.ParseInt(pageTemp, 10, 64)
-		if err != nil {
-			return err
-		}
+	offset, err := strconv.ParseInt(offsetstr, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	ordersPerPageTemp, exists := optionalArgs["c"]
-	if exists {
-		ordersPerPage, err = strconv.ParseInt(ordersPerPageTemp, 10, 64)
-		if err != nil {
-			return err
-		}
+	orders, err := cmd.strg.GetReturnsLimitOffsetPagination(ctx, limit, offset)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	offset := (page - 1) * ordersPerPage
-
-	if offset > cmd.strg.GetSize() {
-		return models.ErrorInvalidOptionalArgs
+	err = json.NewEncoder(w).Encode(orders)
+	if err != nil {
+		return
 	}
 
-	orders := filterOrders(cmd.strg.GetAllOrders(), 0, models.StatusReturned)
-
-	if offset >= int64(len(orders)) {
-		return nil
-	}
-
-	orders = orders[offset:min(int64(len(orders)), offset+ordersPerPage)]
-	for i, order := range orders {
-		fmt.Printf("%d) %s\n", i+1, order.String())
-	}
-
-	return nil
+	w.WriteHeader(http.StatusOK)
 }

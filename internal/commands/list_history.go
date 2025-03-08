@@ -1,14 +1,16 @@
 package commands
 
 import (
-	"fmt"
-	"sort"
+	"context"
+	"encoding/json"
+	"net/http"
+	"strconv"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
 type ListHistoryStorage interface {
-	GetAllOrders() []*models.Order
+	GetAll(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error)
 }
 
 type ListHistory struct {
@@ -19,21 +21,43 @@ func NewListHistory(strg ListHistoryStorage) *ListHistory {
 	return &ListHistory{strg}
 }
 
-func (cmd *ListHistory) Execute(args []string) error {
-	if len(args) != 0 {
-		return models.ErrorInvalidNumberOfArgs
+func (cmd *ListHistory) Execute(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	limitstr := r.URL.Query().Get("limit")
+	if limitstr == "" {
+		http.Error(w, "", http.StatusBadRequest)
+		return
 	}
 
-	orders := cmd.strg.GetAllOrders()
-
-	// по убыванию времени последнего изменения
-	sort.Slice(orders, func(i, j int) bool {
-		return (orders[i].LastStatusSwitchTime()).After(orders[j].LastStatusSwitchTime())
-	})
-
-	for i, order := range orders {
-		fmt.Printf("%d) %s\n", i+1, order.String())
+	offsetstr := r.URL.Query().Get("offset")
+	if offsetstr == "" {
+		http.Error(w, "", http.StatusBadRequest)
+		return
 	}
 
-	return nil
+	limit, err := strconv.ParseInt(limitstr, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	offset, err := strconv.ParseInt(offsetstr, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	orders, err := cmd.strg.GetAll(ctx, limit, offset)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(orders)
+	if err != nil {
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
