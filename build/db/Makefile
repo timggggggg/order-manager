@@ -1,21 +1,10 @@
-SERVICE := postgres
-DB_NAME := orderdb
-USER := postgres
-PASSWORD := postgres
-
-HOST := localhost
-PORT := 5432
-
-GOOSE_DRIVER := postgres
-DB_STRING := "postgres://$(USER):$(PASSWORD)@$(HOST):$(PORT)/$(DB_NAME)?sslmode=disable"
-MIGRATIONS := ./migrations
-ENV_NAME = "order-manager"
+include .env_db
 
 all: compose-up goose-up
 
 # docker compose
 compose-up:
-	@docker-compose -p ${ENV_NAME} up -d $(SERVICE)
+	@docker-compose --env-file=${ENV_FILE} -p ${ENV_NAME} up -d $(SERVICE)
 
 compose-down:
 	@docker-compose -p ${ENV_NAME} down $(SERVICE)

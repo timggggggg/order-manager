@@ -1,4 +1,4 @@
-package commands
+package handlers
 
 import (
 	"context"
@@ -10,6 +10,16 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/packaging"
 )
+
+type OrderJSON struct {
+	ID                  int64   `json:"id"`
+	UserID              int64   `json:"user_id"`
+	StorageDurationDays int64   `json:"storage_duration"`
+	Weight              float64 `json:"weight"`
+	Cost                string  `json:"cost"`
+	Package             string  `json:"package"`
+	ExtraPackage        string  `json:"extra_package,omitempty"`
+}
 
 type AcceptStorage interface {
 	CreateOrder(ctx context.Context, order *models.Order) error
@@ -31,7 +41,7 @@ func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var orderJSON models.OrderJSON
+	var orderJSON OrderJSON
 	if err := json.NewDecoder(r.Body).Decode(&orderJSON); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return

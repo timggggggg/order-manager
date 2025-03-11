@@ -2,17 +2,35 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
+
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
 )
 
 func main() {
+	err := godotenv.Load("cmd/server/.env")
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
+
 	ctx := context.Background()
 
-	pool, err := newPgxPool(ctx)
+	user := os.Getenv("POSTGRES_USER")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	host := os.Getenv("POSTGRES_HOST")
+	port := os.Getenv("POSTGRES_PORT")
+	db := os.Getenv("POSTGRES_DB")
+	sslMode := os.Getenv("SSL_MODE")
+
+	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, password, host, port, db, sslMode)
+
+	pool, err := newPgxPool(ctx, connectionString)
 	if err != nil {
 		log.Fatal("error newPgxPool", err)
 	}
@@ -33,8 +51,8 @@ func newPgFacade(pool *pgxpool.Pool) *postgres.PgFacade {
 	return postgres.NewPgFacade(txManager, pgRepository)
 }
 
-func newPgxPool(ctx context.Context) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/orderdb?sslmode=disable")
+func newPgxPool(ctx context.Context, connectionString string) (*pgxpool.Pool, error) {
+	pool, err := pgxpool.New(ctx, connectionString)
 	if err != nil {
 		return nil, err
 	}

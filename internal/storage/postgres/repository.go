@@ -194,14 +194,3 @@ func (r *PgRepository) Delete(ctx context.Context, id int64) error {
 
 	return nil
 }
-
-func (r *PgRepository) LogOrderEvent(ctx context.Context, order *OrderDB, status models.OrderStatus) error {
-	query := `
-		INSERT INTO order_events (order_id, user_id, event_type)
-		values ($1, $2, $3)
-	`
-	tx := r.txManager.GetQueryEngine(ctx)
-	_, err := tx.Exec(ctx, query, order.ID, order.UserID, status)
-
-	return err
-}

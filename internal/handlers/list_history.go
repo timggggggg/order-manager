@@ -1,4 +1,4 @@
-package commands
+package handlers
 
 import (
 	"context"
@@ -9,19 +9,19 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
-type ListReturnStorage interface {
-	GetReturnsLimitOffsetPagination(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error)
+type ListHistoryStorage interface {
+	GetAll(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error)
 }
 
-type ListReturn struct {
-	strg ListReturnStorage
+type ListHistory struct {
+	strg ListHistoryStorage
 }
 
-func NewListReturn(strg ListReturnStorage) *ListReturn {
-	return &ListReturn{strg}
+func NewListHistory(strg ListHistoryStorage) *ListHistory {
+	return &ListHistory{strg}
 }
 
-func (cmd *ListReturn) Execute(w http.ResponseWriter, r *http.Request) {
+func (cmd *ListHistory) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	limitstr := r.URL.Query().Get("limit")
@@ -48,7 +48,7 @@ func (cmd *ListReturn) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orders, err := cmd.strg.GetReturnsLimitOffsetPagination(ctx, limit, offset)
+	orders, err := cmd.strg.GetAll(ctx, limit, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

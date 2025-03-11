@@ -20,28 +20,67 @@ func NewPgFacade(txManager TransactionManager, pgRepository *PgRepository) *PgFa
 }
 
 func (s *PgFacade) GetByUserIDCursorPagination(ctx context.Context, userID int64, limit int64, cursorID int64) (models.OrdersSliceStorage, error) {
-	result, err := s.pgRepository.GetByUserIDCursorPagination(ctx, userID, limit, cursorID)
+	var result models.OrdersSliceStorage
+
+	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+		resultTemp, err := s.pgRepository.GetByUserIDCursorPagination(ctx, userID, limit, cursorID)
+		if err != nil {
+			return err
+		}
+
+		result = FromOrdersDBSliceStorage(resultTemp)
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-	return FromOrdersDBSliceStorage(result), nil
+
+	return result, nil
 }
 
 func (s *PgFacade) GetAll(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error) {
-	result, err := s.pgRepository.GetAll(ctx, limit, offset)
+	var result models.OrdersSliceStorage
+
+	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+		resultTemp, err := s.pgRepository.GetAll(ctx, limit, offset)
+
+		if err != nil {
+			return err
+		}
+
+		result = FromOrdersDBSliceStorage(resultTemp)
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-	return FromOrdersDBSliceStorage(result), nil
+
+	return result, nil
 }
 
 func (s *PgFacade) GetReturnsLimitOffsetPagination(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error) {
-	result, err := s.pgRepository.GetReturnsLimitOffsetPagination(ctx, limit, offset)
+	var result models.OrdersSliceStorage
+
+	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+		resultTemp, err := s.pgRepository.GetReturnsLimitOffsetPagination(ctx, limit, offset)
+		if err != nil {
+			return err
+		}
+
+		result = FromOrdersDBSliceStorage(resultTemp)
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	return FromOrdersDBSliceStorage(result), nil
+	return result, nil
 }
 
 func (s *PgFacade) CreateOrder(ctx context.Context, order *models.Order) error {
@@ -51,9 +90,6 @@ func (s *PgFacade) CreateOrder(ctx context.Context, order *models.Order) error {
 		if err := s.pgRepository.CreateOrder(ctxTx, orderDB); err != nil {
 			return err
 		}
-		// if err := s.pgRepository.LogOrderEvent(ctxTx, orderDB, models.StatusAccepted); err != nil {
-		// 	return err
-		// }
 		return nil
 	})
 
@@ -64,10 +100,10 @@ func (s *PgFacade) CreateOrder(ctx context.Context, order *models.Order) error {
 	return nil
 }
 
-func (s *PgFacade) ReturnOrder(ctx context.Context, orderID int64, userID int64) (order *models.Order, err error) {
-	var orderDB *OrderDB
-	err = s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
-		orderDB, err = s.pgRepository.GetByID(ctxTx, orderID)
+func (s *PgFacade) ReturnOrder(ctx context.Context, orderID int64, userID int64) (*models.Order, error) {
+	var orderDBupdated *OrderDB
+	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+		orderDB, err := s.pgRepository.GetByID(ctxTx, orderID)
 		if err != nil {
 			return err
 		}
@@ -76,7 +112,7 @@ func (s *PgFacade) ReturnOrder(ctx context.Context, orderID int64, userID int64)
 			return err
 		}
 
-		orderDB, err = s.returnOrder(ctxTx, orderID)
+		orderDBupdated, err = s.returnOrder(ctxTx, orderID)
 		if err != nil {
 			return err
 		}
@@ -88,17 +124,26 @@ func (s *PgFacade) ReturnOrder(ctx context.Context, orderID int64, userID int64)
 		return nil, err
 	}
 
-	return FromDTO(orderDB), nil
+	return FromDTO(orderDBupdated), nil
 }
 
 func (s *PgFacade) returnOrder(ctx context.Context, id int64) (*OrderDB, error) {
-	order, err := s.pgRepository.ReturnOrder(ctx, id)
+	var order *OrderDB
+	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+		orderTemp, err := s.pgRepository.ReturnOrder(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		order = orderTemp
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-	// if err := s.pgRepository.LogOrderEvent(ctx, order, models.StatusReturned); err != nil {
-	// 	return nil, err
-	// }
+
 	return order, nil
 }
 
@@ -129,15 +174,23 @@ func (s *PgFacade) IssueOrders(ctx context.Context, ids []int64) (models.OrdersS
 }
 
 func (s *PgFacade) issueOrders(ctx context.Context, ids []int64) (OrdersDBSliceStorage, error) {
-	orders, err := s.pgRepository.IssueOrders(ctx, ids)
+	var orders OrdersDBSliceStorage
+
+	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+		ordersTemp, err := s.pgRepository.IssueOrders(ctx, ids)
+		if err != nil {
+			return err
+		}
+
+		orders = ordersTemp
+
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-	// for _, order := range orders {
-	// 	if err := s.pgRepository.LogOrderEvent(ctx, order, models.StatusIssued); err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+
 	return orders, nil
 }
 
@@ -169,11 +222,13 @@ func (s *PgFacade) WithdrawOrder(ctx context.Context, id int64) (*models.Order, 
 }
 
 func (s *PgFacade) withdrawOrder(ctx context.Context, order *OrderDB) error {
-	if err := s.pgRepository.Delete(ctx, order.ID); err != nil {
-		return err
-	}
-	// if err := s.pgRepository.LogOrderEvent(ctx, order, models.StatusWithdrawed); err != nil {
-	// 	return err
-	// }
-	return nil
+	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+		if err := s.pgRepository.Delete(ctx, order.ID); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return err
 }

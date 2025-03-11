@@ -3,45 +3,54 @@ package service
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 
-	"gitlab.ozon.dev/timofey15g/homework/internal/commands"
-	storage "gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
 )
 
-type App struct {
-	storage *storage.PgFacade
+type Storage interface {
+	handlers.AcceptStorage
+	handlers.ReturnStorage
+	handlers.IssueStorage
+	handlers.WithdrawStorage
+	handlers.ListOrderStorage
+	handlers.ListReturnStorage
+	handlers.ListHistoryStorage
 }
 
-func NewApp(storage *storage.PgFacade) *App {
+type App struct {
+	storage Storage
+}
+
+func NewApp(storage Storage) *App {
 	return &App{storage}
 }
 
-type Command interface {
+type Handler interface {
 	Execute(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *App) Run() {
-	cmds := map[string]Command{
-		"accept":       commands.NewAcceptOrder(app.storage),
-		"return":       commands.NewReturnOrder(app.storage),
-		"issue":        commands.NewIssueOrder(app.storage),
-		"withdraw":     commands.NewWithdrawOrder(app.storage),
-		"list_order":   commands.NewListOrder(app.storage),
-		"list_return":  commands.NewListReturn(app.storage),
-		"list_history": commands.NewListHistory(app.storage),
+	hs := map[string]Handler{
+		"accept":       handlers.NewAcceptOrder(app.storage),
+		"return":       handlers.NewReturnOrder(app.storage),
+		"issue":        handlers.NewIssueOrder(app.storage),
+		"withdraw":     handlers.NewWithdrawOrder(app.storage),
+		"list_order":   handlers.NewListOrder(app.storage),
+		"list_return":  handlers.NewListReturn(app.storage),
+		"list_history": handlers.NewListHistory(app.storage),
 	}
-
 	router := mux.NewRouter()
 
-	router.HandleFunc("/orders/create", cmds["accept"].Execute)
-	router.HandleFunc("/orders/return", cmds["return"].Execute)
-	router.HandleFunc("/orders/issue", cmds["issue"].Execute)
-	router.HandleFunc("/orders/withdraw", cmds["withdraw"].Execute)
-	router.HandleFunc("/orders/user", cmds["list_order"].Execute)
-	router.HandleFunc("/orders/returns", cmds["list_return"].Execute)
-	router.HandleFunc("/orders", cmds["list_history"].Execute)
+	router.HandleFunc("/orders/create", hs["accept"].Execute).Methods(http.MethodPost)
+	router.HandleFunc("/orders/return", hs["return"].Execute).Methods(http.MethodPost)
+	router.HandleFunc("/orders/issue", hs["issue"].Execute).Methods(http.MethodPost)
+	router.HandleFunc("/orders/withdraw", hs["withdraw"].Execute).Methods(http.MethodDelete)
+	router.HandleFunc("/orders/user", hs["list_order"].Execute).Methods(http.MethodGet)
+	router.HandleFunc("/orders/returns", hs["list_return"].Execute).Methods(http.MethodGet)
+	router.HandleFunc("/orders", hs["list_history"].Execute).Methods(http.MethodGet)
 
 	router.Use(authMiddleware)
 
@@ -51,13 +60,12 @@ func (app *App) Run() {
 
 func authMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userName, password, ok := r.BasicAuth()
-		if !ok {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		// fmt.Print(userName, password)
-		if userName != "admin" || password != "password" {
+		user, password, ok := r.BasicAuth()
+
+		serverUser := os.Getenv("SERVER_USER")
+		serverPassword := os.Getenv("SERVER_PASSWORD")
+
+		if !ok || user != serverUser || password != serverPassword {
 			w.WriteHeader(http.StatusUnauthorized)
 			log.Println("invalid username or password")
 			return
