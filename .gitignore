@@ -1,2 +1,4 @@
 cmd/storage.json
 app
+cmd/server/.env
+build/db/.env_db

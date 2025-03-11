@@ -6,13 +6,16 @@ import (
 )
 
 type OrderStatus string
+type OrdersSliceStorage []*Order
+type OrdersMapStorage map[int64]*Order
 
 const (
-	StatusDefault  OrderStatus = ""
-	StatusAccepted OrderStatus = "accepted"
-	StatusExpired  OrderStatus = "expired"
-	StatusIssued   OrderStatus = "issued"
-	StatusReturned OrderStatus = "returned"
+	StatusDefault    OrderStatus = ""
+	StatusAccepted   OrderStatus = "accepted"
+	StatusExpired    OrderStatus = "expired"
+	StatusIssued     OrderStatus = "issued"
+	StatusReturned   OrderStatus = "returned"
+	StatusWithdrawed OrderStatus = "withdrawed"
 
 	MaxReturnTime = time.Hour * 48
 )
