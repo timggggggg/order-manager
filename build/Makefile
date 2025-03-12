@@ -1,0 +1,3 @@
+
+all:
+	cd db && make;

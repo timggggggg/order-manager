@@ -1,6 +1,6 @@
 BINARY_NAME=app
 
-MAIN_FILE=./cmd/main.go
+MAIN_FILE=./cmd/server/main.go
 
 all: run
 
