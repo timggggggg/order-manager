@@ -24,4 +24,7 @@ test:
 	@go clean -testcache
 	@go test -cover ./internal/handlers
 
+db:
+	cd build && make;
+
 .PHONY: all run build deps clean lint test
