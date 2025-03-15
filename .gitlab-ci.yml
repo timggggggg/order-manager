@@ -8,6 +8,8 @@ stages:
 services:
   - name: postgres:latest
     alias: postgres
+    volumes:
+      - /path/to/data:/var/lib/postgresql/data
 
 before_script:
   - if [ ! -f /go/bin/gomock ]; then go install github.com/gojuno/minimock/v3/cmd/minimock@latest; fi
@@ -15,6 +17,9 @@ before_script:
   - if [ ! -f /go/bin/gocognit ]; then go install github.com/uudashr/gocognit/cmd/gocognit@latest; fi
   - if [ ! -f /go/bin/gocyclo ]; then go install github.com/fzipp/gocyclo/cmd/gocyclo@latest; fi
   - make deps
+  - until pg_isready -h postgres -p 5432; do echo "Waiting for PostgreSQL..."; sleep 5; done
+   
+
 
 variables:
   POSTGRES_USER: user
