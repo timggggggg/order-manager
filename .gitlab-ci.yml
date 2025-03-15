@@ -10,40 +10,17 @@ variables:
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
 
-services:
-  - name: postgres:13
-    alias: postgres
-
 lint:
   stage: lint
-  image: node:16
   script:
-    - npm install
-    - npm run lint
+    - make lint
 
 test:
   stage: test
-  image: node:16
-  services:
-    - name: postgres:13
-      alias: postgres
   script:
-    - npm install
-    - echo "Waiting for PostgreSQL to be ready..."
-    - until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER; do sleep 1; done
-    - npm run test
+    - make test
 
-build:
+compile:
   stage: build
-  image: node:16
-  services:
-    - name: postgres:13
-      alias: postgres
   script:
-    - npm install
-    - echo "Waiting for PostgreSQL to be ready..."
-    - until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER; do sleep 1; done
-    - npm run build
-  artifacts:
-    paths:
-      - dist/
+    - make build
