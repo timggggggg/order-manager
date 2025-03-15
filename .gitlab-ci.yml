@@ -6,6 +6,8 @@ stages:
   - build
 
 before_script:
+  - go clean -cache
+  - docker system prune -f
   - if [ ! -f /go/bin/gomock ]; then go install github.com/gojuno/minimock/v3/cmd/minimock@latest; fi
   - if [ ! -f /go/bin/golangci-lint ]; then go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; fi
   - if [ ! -f /go/bin/gocognit ]; then go install github.com/uudashr/gocognit/cmd/gocognit@latest; fi
