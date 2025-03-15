@@ -5,9 +5,9 @@ stages:
   - test
   - build
 
-services:
-  - name: postgres:latest
-    alias: postgres
+# services:
+#   - name: postgres:latest
+#     alias: postgres
 
 before_script:
   - if [ ! -f /go/bin/gomock ]; then go install github.com/gojuno/minimock/v3/cmd/minimock@latest; fi
