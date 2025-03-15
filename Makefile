@@ -20,4 +20,8 @@ clean:
 lint: 
 	golangci-lint run
 
-.PHONY: all run build deps clean lint
+test:
+	@go clean -testcache
+	@go test -cover ./internal/handlers
+
+.PHONY: all run build deps clean lint test

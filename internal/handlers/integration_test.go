@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -135,16 +134,6 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 		var orders models.OrdersSliceStorage
 		err := json.NewDecoder(resp.Body).Decode(&orders)
 
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Println("Error reading the response body:", err)
-			return
-		}
-
-		// Print the raw response body
-		fmt.Println("Raw Response Body:")
-		fmt.Println(body)
-
 		assert.NoError(t, err)
 	})
 
@@ -181,21 +170,351 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 }
 
 func TestListHistory_Execute_integration(t *testing.T) {
+	storage := setupTest(t)
+	handler := NewListHistory(storage)
 
+	expectedOrders := models.OrdersSliceStorage{
+		models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+	}
+
+	for i := range expectedOrders {
+		err := storage.CreateOrder(t.Context(), expectedOrders[i])
+		assert.NoError(t, err)
+	}
+
+	t.Run("successful execution", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/?limit=2&offset=0", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var orders models.OrdersSliceStorage
+		err := json.NewDecoder(w.Body).Decode(&orders)
+		assert.NoError(t, err)
+		assert.Equal(t, 2, len(orders))
+		assert.Equal(t, int64(1), orders[0].ID)
+		assert.Equal(t, int64(2), orders[1].ID)
+	})
+
+	t.Run("error due to missing limit parameter", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/?offset=0", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("error due to missing offset parameter", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/?limit=2", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("error due to invalid limit parameter", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/?limit=invalid&offset=0", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("error due to invalid offset parameter", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/?limit=2&offset=invalid", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
 }
 
 func TestListOrder_Execute_integration(t *testing.T) {
+	t.Run("successful execution", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewListOrder(storage)
 
+		expectedOrders := models.OrdersSliceStorage{
+			models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		}
+
+		for i := range expectedOrders {
+			err := storage.CreateOrder(t.Context(), expectedOrders[i])
+			assert.NoError(t, err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/orders?user_id=1&limit=10&cursor_id=0", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var orders models.OrdersSliceStorage
+		err := json.NewDecoder(resp.Body).Decode(&orders)
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), orders[0].ID)
+		assert.Equal(t, int64(2), orders[1].ID)
+	})
+
+	t.Run("invalid query parameters", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewListOrder(storage)
+
+		testCases := []struct {
+			name       string
+			query      string
+			statusCode int
+		}{
+			{"Missing user_id", "/orders?limit=10&cursor_id=0", http.StatusBadRequest},
+			{"Missing limit", "/orders?user_id=1&cursor_id=0", http.StatusBadRequest},
+			{"Missing cursor_id", "/orders?user_id=1&limit=10", http.StatusBadRequest},
+			{"Invalid user_id", "/orders?user_id=abc&limit=10&cursor_id=0", http.StatusBadRequest},
+			{"Invalid limit", "/orders?user_id=1&limit=abc&cursor_id=0", http.StatusBadRequest},
+			{"Invalid cursor_id", "/orders?user_id=1&limit=10&cursor_id=abc", http.StatusBadRequest},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				req := httptest.NewRequest(http.MethodGet, tc.query, nil)
+				w := httptest.NewRecorder()
+
+				handler.Execute(w, req)
+
+				resp := w.Result()
+				defer resp.Body.Close()
+
+				assert.Equal(t, tc.statusCode, resp.StatusCode)
+			})
+		}
+	})
 }
 
 func TestListReturn_Execute_integration(t *testing.T) {
+	t.Run("successful execution", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewListReturn(storage)
 
+		expectedOrders := models.OrdersSliceStorage{
+			models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		}
+
+		for i := range expectedOrders {
+			err := storage.CreateOrder(t.Context(), expectedOrders[i])
+			assert.NoError(t, err)
+
+			_, err = storage.IssueOrders(t.Context(), []int64{expectedOrders[i].ID})
+			assert.NoError(t, err)
+
+			_, err = storage.ReturnOrder(t.Context(), expectedOrders[i].ID, expectedOrders[i].UserID)
+			assert.NoError(t, err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/returns?limit=10&offset=0", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var orders models.OrdersSliceStorage
+		err := json.NewDecoder(resp.Body).Decode(&orders)
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), orders[0].ID)
+		assert.Equal(t, int64(2), orders[1].ID)
+	})
+
+	t.Run("invalid query parameters", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewListReturn(storage)
+
+		testCases := []struct {
+			name       string
+			query      string
+			statusCode int
+		}{
+			{"Missing limit", "/returns?offset=0", http.StatusBadRequest},
+			{"Missing offset", "/returns?limit=10", http.StatusBadRequest},
+			{"Invalid limit", "/returns?limit=abc&offset=0", http.StatusBadRequest},
+			{"Invalid offset", "/returns?limit=10&offset=abc", http.StatusBadRequest},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				req := httptest.NewRequest(http.MethodGet, tc.query, nil)
+				w := httptest.NewRecorder()
+
+				handler.Execute(w, req)
+
+				resp := w.Result()
+				defer resp.Body.Close()
+
+				assert.Equal(t, tc.statusCode, resp.StatusCode)
+			})
+		}
+	})
 }
 
 func TestReturnOrder_Execute_integration(t *testing.T) {
+	t.Run("successful execution", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewReturnOrder(storage)
 
+		expectedOrder := models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
+
+		err := storage.CreateOrder(t.Context(), expectedOrder)
+		assert.NoError(t, err)
+		_, err = storage.IssueOrders(t.Context(), []int64{1})
+		assert.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/return?order_id=1&user_id=1", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var order models.Order
+		err = json.NewDecoder(resp.Body).Decode(&order)
+
+		assert.NoError(t, err)
+		assert.Equal(t, order.ID, int64(1))
+	})
+
+	t.Run("invalid query parameters", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewReturnOrder(storage)
+
+		testCases := []struct {
+			name       string
+			query      string
+			statusCode int
+		}{
+			{"Missing order_id", "/return?user_id=1", http.StatusBadRequest},
+			{"Missing user_id", "/return?order_id=1", http.StatusBadRequest},
+			{"Invalid order_id", "/return?order_id=abc&user_id=1", http.StatusBadRequest},
+			{"Invalid user_id", "/return?order_id=1&user_id=abc", http.StatusBadRequest},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				req := httptest.NewRequest(http.MethodGet, tc.query, nil)
+				w := httptest.NewRecorder()
+
+				handler.Execute(w, req)
+
+				resp := w.Result()
+				defer resp.Body.Close()
+
+				assert.Equal(t, tc.statusCode, resp.StatusCode)
+			})
+		}
+	})
+
+	t.Run("storage error", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewReturnOrder(storage)
+
+		req := httptest.NewRequest(http.MethodGet, "/return?order_id=1&user_id=1", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
 }
 
 func TestWithdrawOrder_Execute_integration(t *testing.T) {
+	t.Run("successful execution", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewWithdrawOrder(storage)
 
+		date := time.Now().Add(-480 * time.Hour)
+		expectedOrder := models.NewOrder(1, 1, 10, date, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
+
+		err := storage.CreateOrder(t.Context(), expectedOrder)
+		assert.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/withdraw?order_id=1", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var order models.Order
+		err = json.NewDecoder(resp.Body).Decode(&order)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedOrder.ID, order.ID)
+	})
+
+	t.Run("invalid query parameters", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewWithdrawOrder(storage)
+
+		testCases := []struct {
+			name       string
+			query      string
+			statusCode int
+		}{
+			{"Missing order_id", "/withdraw", http.StatusBadRequest},
+			{"Invalid order_id", "/withdraw?order_id=abc", http.StatusBadRequest},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				req := httptest.NewRequest(http.MethodGet, tc.query, nil)
+				w := httptest.NewRecorder()
+
+				handler.Execute(w, req)
+
+				resp := w.Result()
+				defer resp.Body.Close()
+
+				assert.Equal(t, tc.statusCode, resp.StatusCode)
+			})
+		}
+	})
+
+	t.Run("storage error", func(t *testing.T) {
+		storage := setupTest(t)
+		handler := NewWithdrawOrder(storage)
+
+		req := httptest.NewRequest(http.MethodGet, "/withdraw?order_id=1", nil)
+		w := httptest.NewRecorder()
+
+		handler.Execute(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
 }
