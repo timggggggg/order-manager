@@ -35,7 +35,7 @@ func newPgxPool(ctx context.Context, connectionString string) (*pgxpool.Pool, er
 }
 
 func setupTest(t *testing.T) *postgres.PgFacade {
-	err := godotenv.Load(".env")
+	err := godotenv.Load(".env.example")
 	if err != nil {
 		t.Fatal("Error loading .env file")
 	}
