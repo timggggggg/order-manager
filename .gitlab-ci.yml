@@ -1,27 +1,11 @@
 image: golang:latest
 
 stages:
+  - lint
   - test
   - build
 
-services:
-  - docker:dind
-
-cache:
-  key: ${CI_COMMIT_REF_SLUG}
-  paths:
-    - /go/pkg/mod
-    - /go/bin
-    - go.sum
-    - go.mod
-
 before_script:
-  - apt-get update && apt-get install -y docker.io
-  - apt-get update && apt-get install -y docker-compose
-
-  - docker system prune -a
-  - docker volume prune
-
   - if [ ! -f /go/bin/goose ]; then go install github.com/pressly/goose/v3/cmd/goose@latest; fi
   - if [ ! -f /go/bin/mockgen ]; then go install github.com/golang/mock/mockgen@v1.6.0; fi
   - if [ ! -f /go/bin/golangci-lint ]; then go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; fi
@@ -30,27 +14,15 @@ before_script:
 
   - make deps
 
-# variables:
-#   POSTGRES_USER: postgres
-#   POSTGRES_PASSWORD: postgres
-#   POSTGRES_DB: orderdb
-#   POSTGRES_HOST: localhost
-#   POSTGRES_PORT: 5432
-#   SERVICE: postgres
-#   SSL_MODE: disable
+lint:
+  stage: lint
+  script:
+    - make lint
 
 test:
   stage: test
   script:
-    - make compose-up
-    - sleep 10
-
-    - docker network ls
-    - docker ps
-    - docker logs postgres_db
-
-    - make goose-up
-    - make test
+    - make test-unit
 
 compile:
   stage: build
