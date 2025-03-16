@@ -41,7 +41,7 @@ test:
   stage: test
   script:
     - make compose-up
-    - sleep 5
+    - sleep 10
     - make goose-up
     - make test
 
