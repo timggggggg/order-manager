@@ -24,6 +24,10 @@ test:
 	@go clean -testcache
 	@go test -cover ./internal/handlers
 
+test-unit:
+	@go clean -testcache
+	@go test -v -cover ./internal/handlers/unit_test.go ./internal/handlers/accept_order.go ./internal/handlers/issue_order.go ./internal/handlers/list_history.go ./internal/handlers/list_order.go ./internal/handlers/list_return.go ./internal/handlers/return_order.go ./internal/handlers/withdraw_order.go
+
 compose-up:
 	cd build && make compose-up;
 
