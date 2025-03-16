@@ -24,7 +24,16 @@ test:
 	@go clean -testcache
 	@go test -cover ./internal/handlers
 
-db:
-	cd build && make;
+compose-up:
+	cd build && make compose-up;
+
+goose-up:
+	cd build && make goose-up;
+
+compose-stop:
+	cd build && make compose-stop;
+
+goose-stop:
+	cd build && make goose-stop;
 
 .PHONY: all run build deps clean lint test

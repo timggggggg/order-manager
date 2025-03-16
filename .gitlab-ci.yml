@@ -31,16 +31,18 @@ before_script:
   - make deps
 
 variables:
-  POSTGRES_USER: user
-  POSTGRES_PASSWORD: password
-  POSTGRES_DB: testdb
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_DB: orderdb
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
 
 test:
   stage: test
   script:
-    - make db
+    - make compose-up
+    - sleep 5
+    - make goose-up
     - make test
 
 compile:
