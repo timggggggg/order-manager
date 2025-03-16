@@ -30,20 +30,21 @@ before_script:
 
   - make deps
 
-variables:
-  POSTGRES_USER: postgres
-  POSTGRES_PASSWORD: postgres
-  POSTGRES_DB: orderdb
-  POSTGRES_HOST: localhost
-  POSTGRES_PORT: 5432
-  SERVICE: postgres
-  SSL_MODE: disable
+# variables:
+#   POSTGRES_USER: postgres
+#   POSTGRES_PASSWORD: postgres
+#   POSTGRES_DB: orderdb
+#   POSTGRES_HOST: localhost
+#   POSTGRES_PORT: 5432
+#   SERVICE: postgres
+#   SSL_MODE: disable
 
 test:
   stage: test
   script:
     - make compose-up
     - sleep 10
+    - docker logs postgres_db
     - make goose-up
     - make test
 
