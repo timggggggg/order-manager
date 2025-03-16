@@ -5,8 +5,19 @@ stages:
   - test
   - build
 
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - /go/pkg/mod
+    - /go/bin
+    - go.sum
+    - go.mod
+
 before_script:
-  - if [ ! -f /go/bin/gomock ]; then go install github.com/golang/mock/gomock@latest; fi
+  - docker system prune -a
+  - docker volume prune
+  - if [ ! -f /go/bin/goose ]; then go install github.com/pressly/goose/v3/cmd/goose@latest; fi
+  - if [ ! -f /go/bin/mockgen ]; then go install github.com/golang/mock/mockgen@v1.6.0; fi
   - if [ ! -f /go/bin/golangci-lint ]; then go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; fi
   - if [ ! -f /go/bin/gocognit ]; then go install github.com/uudashr/gocognit/cmd/gocognit@latest; fi
   - if [ ! -f /go/bin/gocyclo ]; then go install github.com/fzipp/gocyclo/cmd/gocyclo@latest; fi
@@ -27,8 +38,6 @@ lint:
 test:
   stage: test
   script:
-    - docker system prune -a
-    - docker volume prune
     - make db
     - make test
 
