@@ -44,7 +44,11 @@ test:
   script:
     - make compose-up
     - sleep 10
+
+    - docker network ls
+    - docker ps
     - docker logs postgres_db
+
     - make goose-up
     - make test
 
