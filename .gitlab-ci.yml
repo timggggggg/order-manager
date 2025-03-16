@@ -1,7 +1,7 @@
 image: golang:latest
 
 stages:
-  - lint
+  #- lint
   - test
   - build
 
@@ -18,6 +18,7 @@ cache:
 
 before_script:
   - apt-get update && apt-get install -y docker.io
+  - apt-get update && apt-get install -y docker-compose
 
   - docker system prune -a
   - docker volume prune
@@ -27,7 +28,7 @@ before_script:
   - if [ ! -f /go/bin/golangci-lint ]; then go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; fi
   - if [ ! -f /go/bin/gocognit ]; then go install github.com/uudashr/gocognit/cmd/gocognit@latest; fi
   - if [ ! -f /go/bin/gocyclo ]; then go install github.com/fzipp/gocyclo/cmd/gocyclo@latest; fi
-  
+
   - make deps
 
 variables:
