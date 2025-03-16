@@ -1,7 +1,6 @@
 image: golang:latest
 
 stages:
-  #- lint
   - test
   - build
 
@@ -37,11 +36,6 @@ variables:
   POSTGRES_DB: testdb
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
-
-lint:
-  stage: lint
-  script:
-    - make lint
 
 test:
   stage: test
