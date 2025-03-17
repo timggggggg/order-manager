@@ -1,5 +1,5 @@
 // nolint
-package handlers
+package integration
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
 )
@@ -68,9 +69,9 @@ func TestAcceptOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
 
-		handler := NewAcceptOrder(storage)
+		handler := handlers.NewAcceptOrder(storage)
 
-		orderJSON := OrderJSON{
+		orderJSON := handlers.OrderJSON{
 			ID:                  1,
 			UserID:              123,
 			StorageDurationDays: 10,
@@ -92,7 +93,7 @@ func TestAcceptOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewAcceptOrder(storage)
+		handler := handlers.NewAcceptOrder(storage)
 
 		invalidBody := `{"id": "invalid_id"}`
 		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewReader([]byte(invalidBody)))
@@ -108,11 +109,11 @@ func TestAcceptOrder_Execute_integration(t *testing.T) {
 func TestIssueOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewIssueOrder(storage)
+		handler := handlers.NewIssueOrder(storage)
 		expectedOrders := models.OrdersSliceStorage{
-			models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-			models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-			models.NewOrder(3, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(2, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(3, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 		}
 
 		for i := range expectedOrders {
@@ -139,7 +140,7 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewIssueOrder(storage)
+		handler := handlers.NewIssueOrder(storage)
 
 		req := httptest.NewRequest(http.MethodPost, "/issue", bytes.NewReader([]byte("invalid json")))
 		w := httptest.NewRecorder()
@@ -154,7 +155,7 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewIssueOrder(storage)
+		handler := handlers.NewIssueOrder(storage)
 
 		requestBody, _ := json.Marshal([]int64{1, 2})
 		req := httptest.NewRequest(http.MethodPost, "/issue", bytes.NewReader(requestBody))
@@ -171,11 +172,11 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 
 func TestListHistory_Execute_integration(t *testing.T) {
 	storage := setupTest(t)
-	handler := NewListHistory(storage)
+	handler := handlers.NewListHistory(storage)
 
 	expectedOrders := models.OrdersSliceStorage{
-		models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-		models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(2, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 	}
 
 	for i := range expectedOrders {
@@ -239,11 +240,11 @@ func TestListHistory_Execute_integration(t *testing.T) {
 func TestListOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewListOrder(storage)
+		handler := handlers.NewListOrder(storage)
 
 		expectedOrders := models.OrdersSliceStorage{
-			models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-			models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(2, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 		}
 
 		for i := range expectedOrders {
@@ -271,7 +272,7 @@ func TestListOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewListOrder(storage)
+		handler := handlers.NewListOrder(storage)
 
 		testCases := []struct {
 			name       string
@@ -305,11 +306,11 @@ func TestListOrder_Execute_integration(t *testing.T) {
 func TestListReturn_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewListReturn(storage)
+		handler := handlers.NewListReturn(storage)
 
 		expectedOrders := models.OrdersSliceStorage{
-			models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-			models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+			models.NewOrder(2, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 		}
 
 		for i := range expectedOrders {
@@ -343,7 +344,7 @@ func TestListReturn_Execute_integration(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewListReturn(storage)
+		handler := handlers.NewListReturn(storage)
 
 		testCases := []struct {
 			name       string
@@ -375,9 +376,9 @@ func TestListReturn_Execute_integration(t *testing.T) {
 func TestReturnOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewReturnOrder(storage)
+		handler := handlers.NewReturnOrder(storage)
 
-		expectedOrder := models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
+		expectedOrder := models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
 		err := storage.CreateOrder(t.Context(), expectedOrder)
 		assert.NoError(t, err)
@@ -403,7 +404,7 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewReturnOrder(storage)
+		handler := handlers.NewReturnOrder(storage)
 
 		testCases := []struct {
 			name       string
@@ -433,7 +434,7 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewReturnOrder(storage)
+		handler := handlers.NewReturnOrder(storage)
 
 		req := httptest.NewRequest(http.MethodGet, "/return?order_id=1&user_id=1", nil)
 		w := httptest.NewRecorder()
@@ -450,9 +451,9 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 func TestWithdrawOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewWithdrawOrder(storage)
+		handler := handlers.NewWithdrawOrder(storage)
 
-		date := time.Now().Add(-480 * time.Hour)
+		date := models.DefaultTime.Add(-480 * time.Hour)
 		expectedOrder := models.NewOrder(1, 1, 10, date, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
 		err := storage.CreateOrder(t.Context(), expectedOrder)
@@ -477,7 +478,7 @@ func TestWithdrawOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewWithdrawOrder(storage)
+		handler := handlers.NewWithdrawOrder(storage)
 
 		testCases := []struct {
 			name       string
@@ -505,7 +506,7 @@ func TestWithdrawOrder_Execute_integration(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := NewWithdrawOrder(storage)
+		handler := handlers.NewWithdrawOrder(storage)
 
 		req := httptest.NewRequest(http.MethodGet, "/withdraw?order_id=1", nil)
 		w := httptest.NewRecorder()

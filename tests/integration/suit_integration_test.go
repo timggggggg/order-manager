@@ -1,4 +1,4 @@
-package handlers
+package integration
 
 import (
 	"bytes"
@@ -10,32 +10,33 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
 type Storage interface {
-	AcceptStorage
-	ReturnStorage
-	IssueStorage
-	WithdrawStorage
-	ListOrderStorage
-	ListReturnStorage
-	ListHistoryStorage
+	handlers.AcceptStorage
+	handlers.ReturnStorage
+	handlers.IssueStorage
+	handlers.WithdrawStorage
+	handlers.ListOrderStorage
+	handlers.ListReturnStorage
+	handlers.ListHistoryStorage
 }
 
 type AcceptOrderTestSuite struct {
 	suite.Suite
 	storage Storage
-	handler *AcceptOrder
+	handler *handlers.AcceptOrder
 }
 
 func (suite *AcceptOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = NewAcceptOrder(suite.storage)
+	suite.handler = handlers.NewAcceptOrder(suite.storage)
 }
 
 func (suite *AcceptOrderTestSuite) TestSuccessfulExecution() {
-	orderJSON := OrderJSON{
+	orderJSON := handlers.OrderJSON{
 		ID:                  1,
 		UserID:              123,
 		StorageDurationDays: 10,
@@ -75,19 +76,19 @@ func TestAcceptOrderTestSuite(t *testing.T) {
 type IssueOrderTestSuite struct {
 	suite.Suite
 	storage Storage
-	handler *IssueOrder
+	handler *handlers.IssueOrder
 }
 
 func (suite *IssueOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = NewIssueOrder(suite.storage)
+	suite.handler = handlers.NewIssueOrder(suite.storage)
 }
 
 func (suite *IssueOrderTestSuite) TestSuccessfulExecution() {
 	expectedOrders := models.OrdersSliceStorage{
-		models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-		models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-		models.NewOrder(3, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(2, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(3, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 	}
 
 	for i := range expectedOrders {
@@ -146,16 +147,16 @@ func TestIssueOrderTestSuite(t *testing.T) {
 type ListHistoryTestSuite struct {
 	suite.Suite
 	storage Storage
-	handler *ListHistory
+	handler *handlers.ListHistory
 }
 
 func (suite *ListHistoryTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = NewListHistory(suite.storage)
+	suite.handler = handlers.NewListHistory(suite.storage)
 
 	expectedOrders := models.OrdersSliceStorage{
-		models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-		models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(2, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 	}
 
 	for i := range expectedOrders {
@@ -225,16 +226,16 @@ func TestListHistoryTestSuite(t *testing.T) {
 type ListOrderTestSuite struct {
 	suite.Suite
 	storage Storage
-	handler *ListOrder
+	handler *handlers.ListOrder
 }
 
 func (suite *ListOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = NewListOrder(suite.storage)
+	suite.handler = handlers.NewListOrder(suite.storage)
 
 	expectedOrders := models.OrdersSliceStorage{
-		models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-		models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(2, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 	}
 
 	for i := range expectedOrders {
@@ -300,16 +301,16 @@ func TestListOrderTestSuite(t *testing.T) {
 type ListReturnTestSuite struct {
 	suite.Suite
 	storage Storage
-	handler *ListReturn
+	handler *handlers.ListReturn
 }
 
 func (suite *ListReturnTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = NewListReturn(suite.storage)
+	suite.handler = handlers.NewListReturn(suite.storage)
 
 	expectedOrders := models.OrdersSliceStorage{
-		models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-		models.NewOrder(2, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
+		models.NewOrder(2, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 	}
 
 	for i := range expectedOrders {
@@ -379,16 +380,16 @@ func TestListReturnTestSuite(t *testing.T) {
 type ReturnOrderTestSuite struct {
 	suite.Suite
 	storage Storage
-	handler *ReturnOrder
+	handler *handlers.ReturnOrder
 }
 
 func (suite *ReturnOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = NewReturnOrder(suite.storage)
+	suite.handler = handlers.NewReturnOrder(suite.storage)
 }
 
 func (suite *ReturnOrderTestSuite) TestSuccessfulExecution() {
-	expectedOrder := models.NewOrder(1, 1, 10, time.Now(), 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
+	expectedOrder := models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
 	err := suite.storage.CreateOrder(suite.T().Context(), expectedOrder)
 	assert.NoError(suite.T(), err)
@@ -461,16 +462,16 @@ func TestReturnOrderTestSuite(t *testing.T) {
 type WithdrawOrderTestSuite struct {
 	suite.Suite
 	storage Storage
-	handler *WithdrawOrder
+	handler *handlers.WithdrawOrder
 }
 
 func (suite *WithdrawOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = NewWithdrawOrder(suite.storage)
+	suite.handler = handlers.NewWithdrawOrder(suite.storage)
 }
 
 func (suite *WithdrawOrderTestSuite) TestSuccessfulExecution() {
-	date := time.Now().Add(-480 * time.Hour)
+	date := models.DefaultTime.Add(-480 * time.Hour)
 	expectedOrder := models.NewOrder(1, 1, 10, date, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
 	err := suite.storage.CreateOrder(suite.T().Context(), expectedOrder)

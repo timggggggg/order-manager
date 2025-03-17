@@ -22,22 +22,22 @@ lint:
 
 test:
 	@go clean -testcache
-	@go test -cover ./internal/handlers
+	@go test -v ./tests/integration ./tests/unit
 
 test-unit:
 	@go clean -testcache
-	@go test -v -cover ./internal/handlers/unit_test.go ./internal/handlers/accept_order.go ./internal/handlers/issue_order.go ./internal/handlers/list_history.go ./internal/handlers/list_order.go ./internal/handlers/list_return.go ./internal/handlers/return_order.go ./internal/handlers/withdraw_order.go
+	@go test -v ./tests/unit
 
 compose-up:
 	cd build && make compose-up;
 
-goose-up:
-	cd build && make goose-up;
+migrations-up:
+	cd build && make migrations-up;
 
 compose-stop:
 	cd build && make compose-stop;
 
-goose-stop:
-	cd build && make goose-stop;
+migrations-down:
+	cd build && make migrations-down;
 
 .PHONY: all run build deps clean lint test

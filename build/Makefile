@@ -5,11 +5,11 @@ all:
 compose-up:
 	cd db && make compose-up;
 
-goose-up:
+migrations-up:
 	cd db && make goose-up;
 
 compose-stop:
 	cd db && make compose-down;
 
-goose-stop:
+migrations-down:
 	cd db && make goose-down-all;
