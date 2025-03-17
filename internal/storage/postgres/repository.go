@@ -170,7 +170,7 @@ func (r *PgRepository) IssueOrders(ctx context.Context, ids []int64) (OrdersDBSl
 
 	query := `
 		UPDATE orders
-		SET issue_time = $1
+		SET issue_time = $1, order_status = 'issued'
 		WHERE id = ANY($2)
 		RETURNING *
 	`

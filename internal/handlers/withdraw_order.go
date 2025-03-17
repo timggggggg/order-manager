@@ -46,6 +46,4 @@ func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }
