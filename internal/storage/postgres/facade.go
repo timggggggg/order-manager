@@ -195,7 +195,7 @@ func (s *PgFacade) issueOrders(ctx context.Context, ids []int64) (OrdersDBSliceS
 }
 
 func (s *PgFacade) WithdrawOrder(ctx context.Context, id int64) (*models.Order, error) {
-	var orderDB *OrderDB
+	var order *models.Order
 
 	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
 		orderDB, err := s.pgRepository.GetByID(ctxTx, id)
@@ -211,6 +211,8 @@ func (s *PgFacade) WithdrawOrder(ctx context.Context, id int64) (*models.Order, 
 			return err
 		}
 
+		order = FromDTO(orderDB)
+
 		return nil
 	})
 
@@ -218,17 +220,13 @@ func (s *PgFacade) WithdrawOrder(ctx context.Context, id int64) (*models.Order, 
 		return nil, err
 	}
 
-	return FromDTO(orderDB), nil
+	return order, nil
 }
 
 func (s *PgFacade) withdrawOrder(ctx context.Context, order *OrderDB) error {
-	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
-		if err := s.pgRepository.Delete(ctx, order.ID); err != nil {
-			return err
-		}
+	if err := s.pgRepository.Delete(ctx, order.ID); err != nil {
+		return err
+	}
 
-		return nil
-	})
-
-	return err
+	return nil
 }

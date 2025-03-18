@@ -20,4 +20,24 @@ clean:
 lint: 
 	golangci-lint run
 
-.PHONY: all run build deps clean lint
+test:
+	@go clean -testcache
+	@go test -v ./tests/integration ./tests/unit
+
+test-unit:
+	@go clean -testcache
+	@go test -v ./tests/unit
+
+compose-up:
+	cd build && make compose-up;
+
+migrations-up:
+	cd build && make migrations-up;
+
+compose-stop:
+	cd build && make compose-stop;
+
+migrations-down:
+	cd build && make migrations-down;
+
+.PHONY: all run build deps clean lint test

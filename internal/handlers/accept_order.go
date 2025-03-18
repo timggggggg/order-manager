@@ -36,11 +36,6 @@ func NewAcceptOrder(strg AcceptStorage) *AcceptOrder {
 func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var orderJSON OrderJSON
 	if err := json.NewDecoder(r.Body).Decode(&orderJSON); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -81,8 +76,6 @@ func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("error accepting order: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }
 
 func validatePackaging(order *models.Order, packagingStrategy packaging.Strategy, extraPackagingStrategy packaging.Strategy) (*models.Money, error) {

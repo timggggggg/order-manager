@@ -38,6 +38,10 @@ func NewMoney(str string) (*Money, error) {
 	return &Money{f*100 + s}, nil
 }
 
+func NewMoneyFromInt(f, s int64) *Money {
+	return &Money{f*100 + s}
+}
+
 func (m *Money) Add(otherAmount int64) {
 	m.Amount += otherAmount
 }

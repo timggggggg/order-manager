@@ -10,7 +10,13 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - app-network
     restart: always
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   pgdata:

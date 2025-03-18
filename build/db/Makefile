@@ -1,4 +1,4 @@
-include .env_db
+include .env_db.example
 
 all: compose-up goose-up
 
