@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
@@ -13,11 +14,12 @@ type IssueStorage interface {
 }
 
 type IssueOrder struct {
-	strg IssueStorage
+	strg        IssueStorage
+	logPipeline ILogPipeline
 }
 
-func NewIssueOrder(strg IssueStorage) *IssueOrder {
-	return &IssueOrder{strg}
+func NewIssueOrder(strg IssueStorage, logPipeline ILogPipeline) *IssueOrder {
+	return &IssueOrder{strg, logPipeline}
 }
 
 func (cmd *IssueOrder) Execute(w http.ResponseWriter, r *http.Request) {
@@ -38,5 +40,9 @@ func (cmd *IssueOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(orders)
 	if err != nil {
 		return
+	}
+
+	for _, order := range orders {
+		cmd.logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusIssued)
 	}
 }

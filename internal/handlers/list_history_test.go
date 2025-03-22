@@ -21,7 +21,7 @@ func TestListHistory_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListHistory(mockStorage)
+		handler := NewListHistory(mockStorage, mock.NewMockLogPipeline())
 
 		limit := int64(10)
 		offset := int64(0)
@@ -47,7 +47,7 @@ func TestListHistory_Execute(t *testing.T) {
 
 	t.Run("missing limit", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListHistory(mockStorage)
+		handler := NewListHistory(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/orders/?offset=0", nil)
 		w := httptest.NewRecorder()
@@ -59,7 +59,7 @@ func TestListHistory_Execute(t *testing.T) {
 
 	t.Run("invalid limit", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListHistory(mockStorage)
+		handler := NewListHistory(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/orders/?limit=abc&offset=0", nil)
 		w := httptest.NewRecorder()
@@ -71,7 +71,7 @@ func TestListHistory_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListHistory(mockStorage)
+		handler := NewListHistory(mockStorage, mock.NewMockLogPipeline())
 
 		limit := int64(10)
 		offset := int64(0)

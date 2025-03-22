@@ -8,7 +8,9 @@ create type packaging_type as enum (
 );
 
 create type ostatus as enum (
+    'nil',
     'accepted',
+    'expired',
     'issued',
     'returned',
     'withdrawed'

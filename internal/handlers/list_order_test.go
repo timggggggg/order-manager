@@ -20,7 +20,7 @@ func TestListOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListOrder(mockStorage)
+		handler := NewListOrder(mockStorage, mock.NewMockLogPipeline())
 
 		userID := int64(1)
 		limit := int64(10)
@@ -49,7 +49,7 @@ func TestListOrder_Execute(t *testing.T) {
 
 	t.Run("bad request - missing user_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListOrder(mockStorage)
+		handler := NewListOrder(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=10&cursor_id=0", nil)
 		w := httptest.NewRecorder()
@@ -61,7 +61,7 @@ func TestListOrder_Execute(t *testing.T) {
 
 	t.Run("internal server error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListOrder(mockStorage)
+		handler := NewListOrder(mockStorage, mock.NewMockLogPipeline())
 
 		userID := int64(1)
 		limit := int64(10)

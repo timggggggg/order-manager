@@ -21,7 +21,7 @@ func TestIssueOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewIssueOrder(mockStorage)
+		handler := NewIssueOrder(mockStorage, mock.NewMockLogPipeline())
 
 		ids := []int64{1, 2, 3}
 
@@ -49,7 +49,7 @@ func TestIssueOrder_Execute(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewIssueOrder(mockStorage)
+		handler := NewIssueOrder(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodPost, "/orders/issue", bytes.NewReader([]byte("invalid body")))
 		rec := httptest.NewRecorder()
@@ -62,7 +62,7 @@ func TestIssueOrder_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewIssueOrder(mockStorage)
+		handler := NewIssueOrder(mockStorage, mock.NewMockLogPipeline())
 
 		ids := []int64{1, 2, 3}
 		mockStorage.EXPECT().

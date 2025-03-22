@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
@@ -14,11 +15,12 @@ type WithdrawStorage interface {
 }
 
 type WithdrawOrder struct {
-	strg WithdrawStorage
+	strg        WithdrawStorage
+	logPipeline ILogPipeline
 }
 
-func NewWithdrawOrder(strg WithdrawStorage) *WithdrawOrder {
-	return &WithdrawOrder{strg}
+func NewWithdrawOrder(strg WithdrawStorage, logPipeline ILogPipeline) *WithdrawOrder {
+	return &WithdrawOrder{strg, logPipeline}
 }
 
 func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
@@ -46,4 +48,6 @@ func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+
+	cmd.logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusWithdrawed)
 }

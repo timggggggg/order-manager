@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
@@ -32,7 +33,7 @@ type AcceptOrderTestSuite struct {
 
 func (suite *AcceptOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewAcceptOrder(suite.storage)
+	suite.handler = handlers.NewAcceptOrder(suite.storage, mock.NewMockLogPipeline())
 }
 
 func (suite *AcceptOrderTestSuite) TestSuccessfulExecution() {
@@ -81,7 +82,7 @@ type IssueOrderTestSuite struct {
 
 func (suite *IssueOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewIssueOrder(suite.storage)
+	suite.handler = handlers.NewIssueOrder(suite.storage, mock.NewMockLogPipeline())
 }
 
 func (suite *IssueOrderTestSuite) TestSuccessfulExecution() {
@@ -152,7 +153,7 @@ type ListHistoryTestSuite struct {
 
 func (suite *ListHistoryTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewListHistory(suite.storage)
+	suite.handler = handlers.NewListHistory(suite.storage, mock.NewMockLogPipeline())
 
 	expectedOrders := models.OrdersSliceStorage{
 		models.NewOrder(2, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -231,7 +232,7 @@ type ListOrderTestSuite struct {
 
 func (suite *ListOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewListOrder(suite.storage)
+	suite.handler = handlers.NewListOrder(suite.storage, mock.NewMockLogPipeline())
 
 	expectedOrders := models.OrdersSliceStorage{
 		models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -306,7 +307,7 @@ type ListReturnTestSuite struct {
 
 func (suite *ListReturnTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewListReturn(suite.storage)
+	suite.handler = handlers.NewListReturn(suite.storage, mock.NewMockLogPipeline())
 
 	expectedOrders := models.OrdersSliceStorage{
 		models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -385,7 +386,7 @@ type ReturnOrderTestSuite struct {
 
 func (suite *ReturnOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewReturnOrder(suite.storage)
+	suite.handler = handlers.NewReturnOrder(suite.storage, mock.NewMockLogPipeline())
 }
 
 func (suite *ReturnOrderTestSuite) TestSuccessfulExecution() {
@@ -467,7 +468,7 @@ type WithdrawOrderTestSuite struct {
 
 func (suite *WithdrawOrderTestSuite) SetupTest() {
 	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewWithdrawOrder(suite.storage)
+	suite.handler = handlers.NewWithdrawOrder(suite.storage, mock.NewMockLogPipeline())
 }
 
 func (suite *WithdrawOrderTestSuite) TestSuccessfulExecution() {

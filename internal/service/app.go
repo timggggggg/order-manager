@@ -4,10 +4,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
 type Storage interface {
@@ -20,12 +22,18 @@ type Storage interface {
 	handlers.ListHistoryStorage
 }
 
-type App struct {
-	storage Storage
+type ILogPipeline interface {
+	LogStatusChange(TS time.Time, ID int64, statusFrom, statusTo models.OrderStatus)
+	Shutdown()
 }
 
-func NewApp(storage Storage) *App {
-	return &App{storage}
+type App struct {
+	storage     Storage
+	logPipeline ILogPipeline
+}
+
+func NewApp(storage Storage, logPipeline ILogPipeline) *App {
+	return &App{storage, logPipeline}
 }
 
 type Handler interface {
@@ -34,13 +42,13 @@ type Handler interface {
 
 func (app *App) Run() {
 	hs := map[string]Handler{
-		"accept":       handlers.NewAcceptOrder(app.storage),
-		"return":       handlers.NewReturnOrder(app.storage),
-		"issue":        handlers.NewIssueOrder(app.storage),
-		"withdraw":     handlers.NewWithdrawOrder(app.storage),
-		"list_order":   handlers.NewListOrder(app.storage),
-		"list_return":  handlers.NewListReturn(app.storage),
-		"list_history": handlers.NewListHistory(app.storage),
+		"accept":       handlers.NewAcceptOrder(app.storage, app.logPipeline),
+		"return":       handlers.NewReturnOrder(app.storage, app.logPipeline),
+		"issue":        handlers.NewIssueOrder(app.storage, app.logPipeline),
+		"withdraw":     handlers.NewWithdrawOrder(app.storage, app.logPipeline),
+		"list_order":   handlers.NewListOrder(app.storage, app.logPipeline),
+		"list_return":  handlers.NewListReturn(app.storage, app.logPipeline),
+		"list_history": handlers.NewListHistory(app.storage, app.logPipeline),
 	}
 	router := mux.NewRouter()
 

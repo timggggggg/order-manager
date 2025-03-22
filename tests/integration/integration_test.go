@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
 )
@@ -69,7 +70,7 @@ func TestAcceptOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
 
-		handler := handlers.NewAcceptOrder(storage)
+		handler := handlers.NewAcceptOrder(storage, mock.NewMockLogPipeline())
 
 		orderJSON := handlers.OrderJSON{
 			ID:                  1,
@@ -93,7 +94,7 @@ func TestAcceptOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewAcceptOrder(storage)
+		handler := handlers.NewAcceptOrder(storage, mock.NewMockLogPipeline())
 
 		invalidBody := `{"id": "invalid_id"}`
 		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewReader([]byte(invalidBody)))
@@ -109,7 +110,7 @@ func TestAcceptOrder_Execute_integration(t *testing.T) {
 func TestIssueOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewIssueOrder(storage)
+		handler := handlers.NewIssueOrder(storage, mock.NewMockLogPipeline())
 		expectedOrders := models.OrdersSliceStorage{
 			models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 			models.NewOrder(2, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -140,7 +141,7 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewIssueOrder(storage)
+		handler := handlers.NewIssueOrder(storage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodPost, "/issue", bytes.NewReader([]byte("invalid json")))
 		w := httptest.NewRecorder()
@@ -155,7 +156,7 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewIssueOrder(storage)
+		handler := handlers.NewIssueOrder(storage, mock.NewMockLogPipeline())
 
 		requestBody, _ := json.Marshal([]int64{1, 2})
 		req := httptest.NewRequest(http.MethodPost, "/issue", bytes.NewReader(requestBody))
@@ -172,7 +173,7 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 
 func TestListHistory_Execute_integration(t *testing.T) {
 	storage := setupTest(t)
-	handler := handlers.NewListHistory(storage)
+	handler := handlers.NewListHistory(storage, mock.NewMockLogPipeline())
 
 	expectedOrders := models.OrdersSliceStorage{
 		models.NewOrder(2, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -240,7 +241,7 @@ func TestListHistory_Execute_integration(t *testing.T) {
 func TestListOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewListOrder(storage)
+		handler := handlers.NewListOrder(storage, mock.NewMockLogPipeline())
 
 		expectedOrders := models.OrdersSliceStorage{
 			models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -272,7 +273,7 @@ func TestListOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewListOrder(storage)
+		handler := handlers.NewListOrder(storage, mock.NewMockLogPipeline())
 
 		testCases := []struct {
 			name       string
@@ -306,7 +307,7 @@ func TestListOrder_Execute_integration(t *testing.T) {
 func TestListReturn_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewListReturn(storage)
+		handler := handlers.NewListReturn(storage, mock.NewMockLogPipeline())
 
 		expectedOrders := models.OrdersSliceStorage{
 			models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -344,7 +345,7 @@ func TestListReturn_Execute_integration(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewListReturn(storage)
+		handler := handlers.NewListReturn(storage, mock.NewMockLogPipeline())
 
 		testCases := []struct {
 			name       string
@@ -376,7 +377,7 @@ func TestListReturn_Execute_integration(t *testing.T) {
 func TestReturnOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewReturnOrder(storage)
+		handler := handlers.NewReturnOrder(storage, mock.NewMockLogPipeline())
 
 		expectedOrder := models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
@@ -404,7 +405,7 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewReturnOrder(storage)
+		handler := handlers.NewReturnOrder(storage, mock.NewMockLogPipeline())
 
 		testCases := []struct {
 			name       string
@@ -434,7 +435,7 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewReturnOrder(storage)
+		handler := handlers.NewReturnOrder(storage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/return?order_id=1&user_id=1", nil)
 		w := httptest.NewRecorder()
@@ -451,7 +452,7 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 func TestWithdrawOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewWithdrawOrder(storage)
+		handler := handlers.NewWithdrawOrder(storage, mock.NewMockLogPipeline())
 
 		date := models.DefaultTime.Add(-480 * time.Hour)
 		expectedOrder := models.NewOrder(1, 1, 10, date, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
@@ -478,7 +479,7 @@ func TestWithdrawOrder_Execute_integration(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewWithdrawOrder(storage)
+		handler := handlers.NewWithdrawOrder(storage, mock.NewMockLogPipeline())
 
 		testCases := []struct {
 			name       string
@@ -506,7 +507,7 @@ func TestWithdrawOrder_Execute_integration(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		storage := setupTest(t)
-		handler := handlers.NewWithdrawOrder(storage)
+		handler := handlers.NewWithdrawOrder(storage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/withdraw?order_id=1", nil)
 		w := httptest.NewRecorder()

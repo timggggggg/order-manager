@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
@@ -14,11 +15,12 @@ type ReturnStorage interface {
 }
 
 type ReturnOrder struct {
-	strg ReturnStorage
+	strg        ReturnStorage
+	logPipeline ILogPipeline
 }
 
-func NewReturnOrder(strg ReturnStorage) *ReturnOrder {
-	return &ReturnOrder{strg}
+func NewReturnOrder(strg ReturnStorage, logPipeline ILogPipeline) *ReturnOrder {
+	return &ReturnOrder{strg, logPipeline}
 }
 
 func (cmd *ReturnOrder) Execute(w http.ResponseWriter, r *http.Request) {
@@ -58,4 +60,6 @@ func (cmd *ReturnOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+
+	cmd.logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusIssued, models.StatusReturned)
 }

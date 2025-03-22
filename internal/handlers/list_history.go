@@ -14,11 +14,12 @@ type ListHistoryStorage interface {
 }
 
 type ListHistory struct {
-	strg ListHistoryStorage
+	strg        ListHistoryStorage
+	logPipeline ILogPipeline
 }
 
-func NewListHistory(strg ListHistoryStorage) *ListHistory {
-	return &ListHistory{strg}
+func NewListHistory(strg ListHistoryStorage, logPipeline ILogPipeline) *ListHistory {
+	return &ListHistory{strg, logPipeline}
 }
 
 func (cmd *ListHistory) Execute(w http.ResponseWriter, r *http.Request) {

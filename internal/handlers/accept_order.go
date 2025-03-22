@@ -25,12 +25,18 @@ type AcceptStorage interface {
 	CreateOrder(ctx context.Context, order *models.Order) error
 }
 
-type AcceptOrder struct {
-	strg AcceptStorage
+type ILogPipeline interface {
+	LogStatusChange(TS time.Time, ID int64, statusFrom, statusTo models.OrderStatus)
+	Shutdown()
 }
 
-func NewAcceptOrder(strg AcceptStorage) *AcceptOrder {
-	return &AcceptOrder{strg}
+type AcceptOrder struct {
+	strg        AcceptStorage
+	logPipeline ILogPipeline
+}
+
+func NewAcceptOrder(strg AcceptStorage, logPipeline ILogPipeline) *AcceptOrder {
+	return &AcceptOrder{strg, logPipeline}
 }
 
 func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +82,7 @@ func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("error accepting order: %v", err), http.StatusInternalServerError)
 		return
 	}
+	cmd.logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusDefault, models.StatusAccepted)
 }
 
 func validatePackaging(order *models.Order, packagingStrategy packaging.Strategy, extraPackagingStrategy packaging.Strategy) (*models.Money, error) {

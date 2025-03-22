@@ -24,7 +24,7 @@ func TestAcceptOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewAcceptOrder(mockStorage)
+		handler := NewAcceptOrder(mockStorage, mock.NewMockLogPipeline())
 
 		orderJSON := OrderJSON{
 			ID:                  1,
@@ -63,7 +63,7 @@ func TestAcceptOrder_Execute(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewAcceptOrder(mockStorage)
+		handler := NewAcceptOrder(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewReader([]byte("invalid body")))
 		rec := httptest.NewRecorder()
@@ -76,7 +76,7 @@ func TestAcceptOrder_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewAcceptOrder(mockStorage)
+		handler := NewAcceptOrder(mockStorage, mock.NewMockLogPipeline())
 
 		orderJSON := OrderJSON{
 			ID:                  1,

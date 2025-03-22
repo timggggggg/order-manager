@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 
+	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 func main() {
@@ -19,7 +23,7 @@ func main() {
 		fmt.Println("Error loading .env file")
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	user := os.Getenv("POSTGRES_USER")
 	password := os.Getenv("POSTGRES_PASSWORD")
@@ -35,13 +39,26 @@ func main() {
 		log.Fatal("error newPgxPool", err)
 	}
 
-	defer func() {
-		pool.Close()
-	}()
-
 	storage := newPgFacade(pool)
 
-	app := service.NewApp(storage)
+	filterWriter := &models.RequiredWordsWriter{
+		Writer:        os.Stdout,
+		RequiredWords: []string{"INFO"},
+	}
+
+	logPipeline := logpipeline.NewLogPipeline(ctx, make([]string, 0), filterWriter, pool)
+
+	go func() {
+		signalChan := make(chan os.Signal, 1)
+		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+		<-signalChan
+		cancel()
+		logPipeline.Shutdown()
+		pool.Close()
+		os.Exit(0)
+	}()
+
+	app := service.NewApp(storage, logPipeline)
 	app.Run()
 }
 

@@ -21,7 +21,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage, mock.NewMockLogPipeline())
 
 		limit := int64(10)
 		offset := int64(5)
@@ -50,7 +50,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("missing limit", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/?offset=5", nil)
 		w := httptest.NewRecorder()
@@ -62,7 +62,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("missing offset", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=10", nil)
 		w := httptest.NewRecorder()
@@ -74,7 +74,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("invalid limit", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=invalid&offset=5", nil)
 		w := httptest.NewRecorder()
@@ -86,7 +86,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("invalid offset", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage, mock.NewMockLogPipeline())
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=10&offset=invalid", nil)
 		w := httptest.NewRecorder()
@@ -98,7 +98,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage, mock.NewMockLogPipeline())
 
 		limit := int64(10)
 		offset := int64(5)
