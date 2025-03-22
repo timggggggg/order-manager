@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
@@ -41,9 +42,20 @@ func main() {
 
 	storage := newPgFacade(pool)
 
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("./cmd/server")
+	err = viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("fatal error config file: %w", err))
+	}
+
+	keywords := viper.GetStringSlice("keywords")
+	fmt.Println("keywords:", keywords)
+
 	filterWriter := &models.RequiredWordsWriter{
 		Writer:        os.Stdout,
-		RequiredWords: []string{"INFO"},
+		RequiredWords: keywords,
 	}
 
 	logPipeline := logpipeline.NewLogPipeline(ctx, make([]string, 0), filterWriter, pool)
