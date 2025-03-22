@@ -1,4 +1,4 @@
-package unit
+package handlers
 
 import (
 	"encoding/json"
@@ -10,9 +10,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/tests/unit/mock"
 )
 
 func TestListOrder_Execute(t *testing.T) {
@@ -21,7 +20,7 @@ func TestListOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListOrder(mockStorage)
+		handler := NewListOrder(mockStorage)
 
 		userID := int64(1)
 		limit := int64(10)
@@ -50,7 +49,7 @@ func TestListOrder_Execute(t *testing.T) {
 
 	t.Run("bad request - missing user_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListOrder(mockStorage)
+		handler := NewListOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=10&cursor_id=0", nil)
 		w := httptest.NewRecorder()
@@ -62,7 +61,7 @@ func TestListOrder_Execute(t *testing.T) {
 
 	t.Run("internal server error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListOrder(mockStorage)
+		handler := NewListOrder(mockStorage)
 
 		userID := int64(1)
 		limit := int64(10)

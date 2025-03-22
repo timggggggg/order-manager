@@ -1,4 +1,4 @@
-package unit
+package handlers
 
 import (
 	"encoding/json"
@@ -11,9 +11,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/tests/unit/mock"
 )
 
 func TestListHistory_Execute(t *testing.T) {
@@ -22,7 +21,7 @@ func TestListHistory_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListHistory(mockStorage)
+		handler := NewListHistory(mockStorage)
 
 		limit := int64(10)
 		offset := int64(0)
@@ -48,7 +47,7 @@ func TestListHistory_Execute(t *testing.T) {
 
 	t.Run("missing limit", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListHistory(mockStorage)
+		handler := NewListHistory(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/orders/?offset=0", nil)
 		w := httptest.NewRecorder()
@@ -60,7 +59,7 @@ func TestListHistory_Execute(t *testing.T) {
 
 	t.Run("invalid limit", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListHistory(mockStorage)
+		handler := NewListHistory(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/orders/?limit=abc&offset=0", nil)
 		w := httptest.NewRecorder()
@@ -72,7 +71,7 @@ func TestListHistory_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListHistory(mockStorage)
+		handler := NewListHistory(mockStorage)
 
 		limit := int64(10)
 		offset := int64(0)

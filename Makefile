@@ -26,7 +26,7 @@ test:
 
 test-unit:
 	@go clean -testcache
-	@go test -v ./tests/unit
+	@go test -v -cover ./internal/handlers
 
 compose-up:
 	cd build && make compose-up;
