@@ -22,7 +22,7 @@ lint:
 
 test:
 	@go clean -testcache
-	@go test -v ./tests/integration ./tests/unit
+	@go test -v -cover ./tests/integration ./internal/handlers
 
 test-unit:
 	@go clean -testcache
