@@ -20,7 +20,7 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewWithdrawOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewWithdrawOrder(mockStorage)
 
 		orderID := int64(123)
 		expectedOrder := &models.Order{
@@ -46,7 +46,7 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 	t.Run("missing order_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewWithdrawOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewWithdrawOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
@@ -58,7 +58,7 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 	t.Run("invalid order_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewWithdrawOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewWithdrawOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=invalid", nil)
 		rec := httptest.NewRecorder()
@@ -70,7 +70,7 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewWithdrawOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewWithdrawOrder(mockStorage)
 
 		orderID := int64(123)
 		mockStorage.EXPECT().

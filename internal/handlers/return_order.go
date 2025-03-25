@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type ReturnStorage interface {
@@ -15,16 +16,16 @@ type ReturnStorage interface {
 }
 
 type ReturnOrder struct {
-	strg        ReturnStorage
-	logPipeline ILogPipeline
+	strg ReturnStorage
 }
 
-func NewReturnOrder(strg ReturnStorage, logPipeline ILogPipeline) *ReturnOrder {
-	return &ReturnOrder{strg, logPipeline}
+func NewReturnOrder(strg ReturnStorage) *ReturnOrder {
+	return &ReturnOrder{strg}
 }
 
 func (cmd *ReturnOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	orderIDstr := r.URL.Query().Get("order_id")
 	if orderIDstr == "" {
@@ -61,5 +62,5 @@ func (cmd *ReturnOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd.logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusIssued, models.StatusReturned)
+	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusIssued, models.StatusReturned)
 }

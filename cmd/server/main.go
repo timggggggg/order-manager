@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -16,6 +17,7 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
 	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
+	"gitlab.ozon.dev/timofey15g/homework/logger"
 )
 
 func main() {
@@ -57,7 +59,18 @@ func main() {
 		RequiredWords: keywords,
 	}
 
-	logPipeline := logpipeline.NewLogPipeline(ctx, filterWriter, pool)
+	inputDBChan := make(chan logpipeline.Log, 5)
+	stdinChan := make(chan logpipeline.Log, 5)
+
+	dbPool := logpipeline.NewWorkerPool(2, 5, 500*time.Millisecond, logger.NewConsoleLogger(filterWriter))
+	stdoutPool := logpipeline.NewWorkerPool(2, 5, 500*time.Millisecond, logger.NewDBLogger(pool))
+
+	dbPool.Start(ctx, inputDBChan, stdinChan)
+	stdoutPool.Start(ctx, stdinChan, nil)
+
+	logPipeline := logpipeline.GetLogPipelineInstance()
+	logPipeline.SetWorkerPools(dbPool, stdoutPool)
+	logPipeline.SetInputChan(inputDBChan)
 
 	go func() {
 		signalChan := make(chan os.Signal, 1)
@@ -69,7 +82,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	app := service.NewApp(storage, logPipeline)
+	app := service.NewApp(storage)
 	app.Run()
 }
 

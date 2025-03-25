@@ -11,13 +11,23 @@ import (
 
 type ILogger interface {
 	LogStatusChange(ctx context.Context, ts time.Time, id int64, statusFrom, statusTo models.OrderStatus)
+	LogRequest(ctx context.Context, ts time.Time, method, url, request_body string)
+	LogResponse(ctx context.Context, ts time.Time, code int64, body string)
 }
 
 type Log struct {
+	TP         int64
 	TS         time.Time
 	ID         int64
 	StatusFrom models.OrderStatus
 	StatusTo   models.OrderStatus
+
+	Method       string
+	Url          string
+	Request_body string
+
+	Code          int64
+	Response_body string
 }
 
 type WorkerPool struct {
@@ -86,7 +96,16 @@ func (wp *WorkerPool) processBatch(ctx context.Context, batch []Log) {
 		return
 	}
 	for _, b := range batch {
-		wp.logger.LogStatusChange(ctx, b.TS, b.ID, b.StatusFrom, b.StatusTo)
+		switch b.TP {
+		case 0:
+			wp.logger.LogStatusChange(ctx, b.TS, b.ID, b.StatusFrom, b.StatusTo)
+		case 1:
+			wp.logger.LogRequest(ctx, b.TS, b.Method, b.Url, b.Request_body)
+		case 2:
+			wp.logger.LogResponse(ctx, b.TS, b.Code, b.Response_body)
+		default:
+			fmt.Println("invalid log")
+		}
 	}
 	fmt.Println("batch processed")
 	if wp.next != nil {

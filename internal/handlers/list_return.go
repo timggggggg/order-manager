@@ -14,12 +14,11 @@ type ListReturnStorage interface {
 }
 
 type ListReturn struct {
-	strg        ListReturnStorage
-	logPipeline ILogPipeline
+	strg ListReturnStorage
 }
 
-func NewListReturn(strg ListReturnStorage, logPipeline ILogPipeline) *ListReturn {
-	return &ListReturn{strg, logPipeline}
+func NewListReturn(strg ListReturnStorage) *ListReturn {
+	return &ListReturn{strg}
 }
 
 func (cmd *ListReturn) Execute(w http.ResponseWriter, r *http.Request) {

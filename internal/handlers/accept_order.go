@@ -9,6 +9,7 @@ import (
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/packaging"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type OrderJSON struct {
@@ -25,22 +26,17 @@ type AcceptStorage interface {
 	CreateOrder(ctx context.Context, order *models.Order) error
 }
 
-type ILogPipeline interface {
-	LogStatusChange(TS time.Time, ID int64, statusFrom, statusTo models.OrderStatus)
-	Shutdown()
-}
-
 type AcceptOrder struct {
-	strg        AcceptStorage
-	logPipeline ILogPipeline
+	strg AcceptStorage
 }
 
-func NewAcceptOrder(strg AcceptStorage, logPipeline ILogPipeline) *AcceptOrder {
-	return &AcceptOrder{strg, logPipeline}
+func NewAcceptOrder(strg AcceptStorage) *AcceptOrder {
+	return &AcceptOrder{strg}
 }
 
 func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	var orderJSON OrderJSON
 	if err := json.NewDecoder(r.Body).Decode(&orderJSON); err != nil {
@@ -82,7 +78,7 @@ func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("error accepting order: %v", err), http.StatusInternalServerError)
 		return
 	}
-	cmd.logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusDefault, models.StatusAccepted)
+	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusDefault, models.StatusAccepted)
 }
 
 func validatePackaging(order *models.Order, packagingStrategy packaging.Strategy, extraPackagingStrategy packaging.Strategy) (*models.Money, error) {

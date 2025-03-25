@@ -30,3 +30,29 @@ func (l *DBLogger) LogStatusChange(ctx context.Context, ts time.Time, id int64, 
 		return
 	}
 }
+
+func (l *DBLogger) LogRequest(ctx context.Context, ts time.Time, method, url, request_body string) {
+	query := `
+		INSERT INTO http_req_logs (ts, method, url, request_body)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+	tx := l.pool
+	_, err := tx.Exec(ctx, query, ts, method, url, request_body)
+
+	if err != nil {
+		return
+	}
+}
+
+func (l *DBLogger) LogResponse(ctx context.Context, ts time.Time, code int64, body string) {
+	query := `
+		INSERT INTO http_resp_logs (ts, status_code, body)
+		VALUES ($1, $2, $3, $4)
+	`
+	tx := l.pool
+	_, err := tx.Exec(ctx, query, ts, code, body)
+
+	if err != nil {
+		return
+	}
+}

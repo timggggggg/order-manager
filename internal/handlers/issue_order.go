@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type IssueStorage interface {
@@ -14,16 +15,16 @@ type IssueStorage interface {
 }
 
 type IssueOrder struct {
-	strg        IssueStorage
-	logPipeline ILogPipeline
+	strg IssueStorage
 }
 
-func NewIssueOrder(strg IssueStorage, logPipeline ILogPipeline) *IssueOrder {
-	return &IssueOrder{strg, logPipeline}
+func NewIssueOrder(strg IssueStorage) *IssueOrder {
+	return &IssueOrder{strg}
 }
 
 func (cmd *IssueOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	var ids []int64
 	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
@@ -43,6 +44,6 @@ func (cmd *IssueOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, order := range orders {
-		cmd.logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusIssued)
+		logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusIssued)
 	}
 }

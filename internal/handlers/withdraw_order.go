@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type WithdrawStorage interface {
@@ -15,16 +16,16 @@ type WithdrawStorage interface {
 }
 
 type WithdrawOrder struct {
-	strg        WithdrawStorage
-	logPipeline ILogPipeline
+	strg WithdrawStorage
 }
 
-func NewWithdrawOrder(strg WithdrawStorage, logPipeline ILogPipeline) *WithdrawOrder {
-	return &WithdrawOrder{strg, logPipeline}
+func NewWithdrawOrder(strg WithdrawStorage) *WithdrawOrder {
+	return &WithdrawOrder{strg}
 }
 
 func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	orderIDstr := r.URL.Query().Get("order_id")
 	if orderIDstr == "" {
@@ -49,5 +50,5 @@ func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd.logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusWithdrawed)
+	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusWithdrawed)
 }

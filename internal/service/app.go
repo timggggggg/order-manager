@@ -1,6 +1,8 @@
 package service
 
 import (
+	"bytes"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -9,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
-	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type Storage interface {
@@ -22,18 +24,12 @@ type Storage interface {
 	handlers.ListHistoryStorage
 }
 
-type ILogPipeline interface {
-	LogStatusChange(TS time.Time, ID int64, statusFrom, statusTo models.OrderStatus)
-	Shutdown()
-}
-
 type App struct {
-	storage     Storage
-	logPipeline ILogPipeline
+	storage Storage
 }
 
-func NewApp(storage Storage, logPipeline ILogPipeline) *App {
-	return &App{storage, logPipeline}
+func NewApp(storage Storage) *App {
+	return &App{storage}
 }
 
 type Handler interface {
@@ -42,13 +38,13 @@ type Handler interface {
 
 func (app *App) Run() {
 	hs := map[string]Handler{
-		"accept":       handlers.NewAcceptOrder(app.storage, app.logPipeline),
-		"return":       handlers.NewReturnOrder(app.storage, app.logPipeline),
-		"issue":        handlers.NewIssueOrder(app.storage, app.logPipeline),
-		"withdraw":     handlers.NewWithdrawOrder(app.storage, app.logPipeline),
-		"list_order":   handlers.NewListOrder(app.storage, app.logPipeline),
-		"list_return":  handlers.NewListReturn(app.storage, app.logPipeline),
-		"list_history": handlers.NewListHistory(app.storage, app.logPipeline),
+		"accept":       handlers.NewAcceptOrder(app.storage),
+		"return":       handlers.NewReturnOrder(app.storage),
+		"issue":        handlers.NewIssueOrder(app.storage),
+		"withdraw":     handlers.NewWithdrawOrder(app.storage),
+		"list_order":   handlers.NewListOrder(app.storage),
+		"list_return":  handlers.NewListReturn(app.storage),
+		"list_history": handlers.NewListHistory(app.storage),
 	}
 	router := mux.NewRouter()
 
@@ -79,10 +75,38 @@ func authMiddleware(handler http.Handler) http.Handler {
 			return
 		}
 
+		next := logPutPostDeleteMiddleware(handler)
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func logPutPostDeleteMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
+			log.Printf("Request: %s %s, Body: %v", r.Method, r.URL.Path, r.Body)
+		}
+
 		next := logMiddleware(handler)
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+type ResponseWriterWrapper struct {
+	http.ResponseWriter
+	StatusCode int
+	Body       *bytes.Buffer
+}
+
+func (rw *ResponseWriterWrapper) WriteHeader(statusCode int) {
+	rw.StatusCode = statusCode
+	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (rw *ResponseWriterWrapper) Write(data []byte) (int, error) {
+	rw.Body.Write(data)
+	return rw.ResponseWriter.Write(data)
 }
 
 func logMiddleware(next http.Handler) http.Handler {
@@ -90,6 +114,28 @@ func logMiddleware(next http.Handler) http.Handler {
 		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
 			log.Printf("Request: %s %s, Body: %v", r.Method, r.URL.Path, r.Body)
 		}
-		next.ServeHTTP(w, r)
+
+		logPipeline := logpipeline.GetLogPipelineInstance()
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Unable to read request body", http.StatusInternalServerError)
+			return
+		}
+		defer r.Body.Close()
+
+		bodyString := string(body)
+
+		logPipeline.LogRequest(time.Now(), r.Method, r.URL.Path, bodyString)
+
+		wrappedWriter := &ResponseWriterWrapper{
+			ResponseWriter: w,
+			StatusCode:     http.StatusOK,
+			Body:           &bytes.Buffer{},
+		}
+
+		next.ServeHTTP(wrappedWriter, r)
+
+		logPipeline.LogResponse(time.Now(), int64(wrappedWriter.StatusCode), wrappedWriter.Body.String())
 	})
 }

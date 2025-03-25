@@ -21,7 +21,7 @@ func TestReturnOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewReturnOrder(mockStorage)
 
 		orderID := int64(123)
 		userID := int64(456)
@@ -44,7 +44,7 @@ func TestReturnOrder_Execute(t *testing.T) {
 
 	t.Run("missing order_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewReturnOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?user_id=456", nil)
 		rec := httptest.NewRecorder()
@@ -56,7 +56,7 @@ func TestReturnOrder_Execute(t *testing.T) {
 
 	t.Run("missing user_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewReturnOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=123", nil)
 		rec := httptest.NewRecorder()
@@ -68,7 +68,7 @@ func TestReturnOrder_Execute(t *testing.T) {
 
 	t.Run("invalid order_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewReturnOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=abc&user_id=456", nil)
 		rec := httptest.NewRecorder()
@@ -80,7 +80,7 @@ func TestReturnOrder_Execute(t *testing.T) {
 
 	t.Run("invalid user_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewReturnOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=123&user_id=abc", nil)
 		rec := httptest.NewRecorder()
@@ -92,7 +92,7 @@ func TestReturnOrder_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage, mock.NewMockLogPipeline())
+		handler := NewReturnOrder(mockStorage)
 
 		orderID := int64(123)
 		userID := int64(456)

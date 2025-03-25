@@ -14,12 +14,11 @@ type ListOrderStorage interface {
 }
 
 type ListOrder struct {
-	strg        ListOrderStorage
-	logPipeline ILogPipeline
+	strg ListOrderStorage
 }
 
-func NewListOrder(strg ListOrderStorage, logPipeline ILogPipeline) *ListOrder {
-	return &ListOrder{strg, logPipeline}
+func NewListOrder(strg ListOrderStorage) *ListOrder {
+	return &ListOrder{strg}
 }
 
 func (cmd *ListOrder) Execute(w http.ResponseWriter, r *http.Request) {

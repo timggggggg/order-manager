@@ -59,3 +59,24 @@ func (l *ConsoleLogger) LogStatusChange(ctx context.Context, ts time.Time, id in
 		models.FormatTime(ts),
 	)
 }
+
+func (l *ConsoleLogger) LogRequest(ctx context.Context, ts time.Time, method, url, request_body string) {
+	fmt.Fprintf(
+		l.output,
+		"[INFO]: http request: method=%s\n url=%s\n body=%s\n Time: %s\n\n",
+		method,
+		url,
+		request_body,
+		models.FormatTime(ts),
+	)
+}
+
+func (l *ConsoleLogger) LogResponse(ctx context.Context, ts time.Time, code int64, body string) {
+	fmt.Fprintf(
+		l.output,
+		"[INFO]: http response: code=%d\n body=%s\n Time: %s\n\n",
+		code,
+		body,
+		models.FormatTime(ts),
+	)
+}

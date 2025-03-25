@@ -1,14 +1,14 @@
 package logpipeline
 
 import (
-	"context"
-	"io"
+	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/logger"
 )
+
+var once sync.Once
+var instance *LogPipeline = nil
 
 type LogPipeline struct {
 	dbWP      *WorkerPool
@@ -16,29 +16,83 @@ type LogPipeline struct {
 	inputChan chan Log
 }
 
-func NewLogPipeline(ctx context.Context, stdout io.Writer, pool *pgxpool.Pool) *LogPipeline {
-	inputDBChan := make(chan Log, 5)
-	stdinChan := make(chan Log, 5)
+func GetLogPipelineInstance() *LogPipeline {
+	once.Do(func() {
+		instance = NewLogPipeline()
+	})
+	return instance
+}
 
-	dbPool := NewWorkerPool(2, 5, 500*time.Millisecond, logger.NewConsoleLogger(stdout))
-	stdoutPool := NewWorkerPool(2, 5, 500*time.Millisecond, logger.NewDBLogger(pool))
+func (p *LogPipeline) SetWorkerPools(dbWP, stdoutWP *WorkerPool) {
+	p.dbWP = dbWP
+	p.stdoutWP = stdoutWP
+}
 
-	dbPool.Start(ctx, inputDBChan, stdinChan)
-	stdoutPool.Start(ctx, stdinChan, nil)
+func (p *LogPipeline) SetInputChan(ch chan Log) {
+	p.inputChan = ch
+}
 
+func NewLogPipeline() *LogPipeline {
 	return &LogPipeline{
-		dbWP:      dbPool,
-		stdoutWP:  stdoutPool,
-		inputChan: inputDBChan,
+		dbWP:      nil,
+		stdoutWP:  nil,
+		inputChan: nil,
 	}
 }
 
 func (p *LogPipeline) LogStatusChange(TS time.Time, ID int64, statusFrom, statusTo models.OrderStatus) {
+	if p.inputChan == nil {
+		return
+	}
 	log := Log{
+		0,
 		TS,
 		ID,
 		statusFrom,
 		statusTo,
+		"",
+		"",
+		"",
+		0,
+		"",
+	}
+	p.inputChan <- log
+}
+
+func (p *LogPipeline) LogRequest(ts time.Time, method, url, request_body string) {
+	if p.inputChan == nil {
+		return
+	}
+	log := Log{
+		1,
+		ts,
+		0,
+		models.StatusDefault,
+		models.StatusDefault,
+		method,
+		url,
+		request_body,
+		0,
+		"",
+	}
+	p.inputChan <- log
+}
+
+func (p *LogPipeline) LogResponse(ts time.Time, code int64, body string) {
+	if p.inputChan == nil {
+		return
+	}
+	log := Log{
+		2,
+		ts,
+		0,
+		models.StatusDefault,
+		models.StatusDefault,
+		"",
+		"",
+		"",
+		code,
+		body,
 	}
 	p.inputChan <- log
 }
