@@ -75,18 +75,6 @@ func authMiddleware(handler http.Handler) http.Handler {
 			return
 		}
 
-		next := logPutPostDeleteMiddleware(handler)
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func logPutPostDeleteMiddleware(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
-			log.Printf("Request: %s %s, Body: %v", r.Method, r.URL.Path, r.Body)
-		}
-
 		next := logMiddleware(handler)
 
 		next.ServeHTTP(w, r)
@@ -111,20 +99,21 @@ func (rw *ResponseWriterWrapper) Write(data []byte) (int, error) {
 
 func logMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
-			log.Printf("Request: %s %s, Body: %v", r.Method, r.URL.Path, r.Body)
-		}
-
 		logPipeline := logpipeline.GetLogPipelineInstance()
 
-		body, err := io.ReadAll(r.Body)
+		var bodyBuffer bytes.Buffer
+
+		tee := io.TeeReader(r.Body, &bodyBuffer)
+
+		bodyBytes, err := io.ReadAll(tee)
 		if err != nil {
 			http.Error(w, "Unable to read request body", http.StatusInternalServerError)
 			return
 		}
-		defer r.Body.Close()
 
-		bodyString := string(body)
+		bodyString := string(bodyBytes)
+
+		r.Body = io.NopCloser(&bodyBuffer)
 
 		logPipeline.LogRequest(time.Now(), r.Method, r.URL.Path, bodyString)
 
