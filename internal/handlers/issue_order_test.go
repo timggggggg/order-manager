@@ -1,4 +1,4 @@
-package unit
+package handlers
 
 import (
 	"bytes"
@@ -11,9 +11,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/tests/unit/mock"
 )
 
 func TestIssueOrder_Execute(t *testing.T) {
@@ -22,7 +21,7 @@ func TestIssueOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewIssueOrder(mockStorage)
+		handler := NewIssueOrder(mockStorage)
 
 		ids := []int64{1, 2, 3}
 
@@ -50,7 +49,7 @@ func TestIssueOrder_Execute(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewIssueOrder(mockStorage)
+		handler := NewIssueOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodPost, "/orders/issue", bytes.NewReader([]byte("invalid body")))
 		rec := httptest.NewRecorder()
@@ -63,7 +62,7 @@ func TestIssueOrder_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewIssueOrder(mockStorage)
+		handler := NewIssueOrder(mockStorage)
 
 		ids := []int64{1, 2, 3}
 		mockStorage.EXPECT().

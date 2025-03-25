@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type IssueStorage interface {
@@ -22,6 +24,7 @@ func NewIssueOrder(strg IssueStorage) *IssueOrder {
 
 func (cmd *IssueOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	var ids []int64
 	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
@@ -38,5 +41,9 @@ func (cmd *IssueOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(orders)
 	if err != nil {
 		return
+	}
+
+	for _, order := range orders {
+		logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusIssued)
 	}
 }

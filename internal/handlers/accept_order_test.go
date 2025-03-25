@@ -1,4 +1,4 @@
-package unit
+package handlers
 
 import (
 	"bytes"
@@ -13,10 +13,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/packaging"
-	"gitlab.ozon.dev/timofey15g/homework/tests/unit/mock"
 )
 
 func TestAcceptOrder_Execute(t *testing.T) {
@@ -25,9 +24,9 @@ func TestAcceptOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewAcceptOrder(mockStorage)
+		handler := NewAcceptOrder(mockStorage)
 
-		orderJSON := handlers.OrderJSON{
+		orderJSON := OrderJSON{
 			ID:                  1,
 			UserID:              123,
 			StorageDurationDays: 10,
@@ -64,7 +63,7 @@ func TestAcceptOrder_Execute(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewAcceptOrder(mockStorage)
+		handler := NewAcceptOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewReader([]byte("invalid body")))
 		rec := httptest.NewRecorder()
@@ -77,9 +76,9 @@ func TestAcceptOrder_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewAcceptOrder(mockStorage)
+		handler := NewAcceptOrder(mockStorage)
 
-		orderJSON := handlers.OrderJSON{
+		orderJSON := OrderJSON{
 			ID:                  1,
 			UserID:              123,
 			StorageDurationDays: 10,

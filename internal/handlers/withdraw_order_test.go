@@ -1,4 +1,4 @@
-package unit
+package handlers
 
 import (
 	"encoding/json"
@@ -10,9 +10,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/tests/unit/mock"
 )
 
 func TestWithdrawOrder_Execute(t *testing.T) {
@@ -21,7 +20,7 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewWithdrawOrder(mockStorage)
+		handler := NewWithdrawOrder(mockStorage)
 
 		orderID := int64(123)
 		expectedOrder := &models.Order{
@@ -47,7 +46,7 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 	t.Run("missing order_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewWithdrawOrder(mockStorage)
+		handler := NewWithdrawOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
@@ -59,7 +58,7 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 	t.Run("invalid order_id", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewWithdrawOrder(mockStorage)
+		handler := NewWithdrawOrder(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=invalid", nil)
 		rec := httptest.NewRecorder()
@@ -71,7 +70,7 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewWithdrawOrder(mockStorage)
+		handler := NewWithdrawOrder(mockStorage)
 
 		orderID := int64(123)
 		mockStorage.EXPECT().

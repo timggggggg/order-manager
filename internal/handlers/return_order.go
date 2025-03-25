@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type ReturnStorage interface {
@@ -23,6 +25,7 @@ func NewReturnOrder(strg ReturnStorage) *ReturnOrder {
 
 func (cmd *ReturnOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	orderIDstr := r.URL.Query().Get("order_id")
 	if orderIDstr == "" {
@@ -58,4 +61,6 @@ func (cmd *ReturnOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+
+	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusIssued, models.StatusReturned)
 }

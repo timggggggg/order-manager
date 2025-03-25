@@ -1,4 +1,4 @@
-package unit
+package handlers
 
 import (
 	"encoding/json"
@@ -11,9 +11,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/tests/unit/mock"
 )
 
 func TestListReturn_Execute(t *testing.T) {
@@ -22,7 +21,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage)
 
 		limit := int64(10)
 		offset := int64(5)
@@ -51,7 +50,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("missing limit", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?offset=5", nil)
 		w := httptest.NewRecorder()
@@ -63,7 +62,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("missing offset", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=10", nil)
 		w := httptest.NewRecorder()
@@ -75,7 +74,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("invalid limit", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=invalid&offset=5", nil)
 		w := httptest.NewRecorder()
@@ -87,7 +86,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("invalid offset", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage)
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=10&offset=invalid", nil)
 		w := httptest.NewRecorder()
@@ -99,7 +98,7 @@ func TestListReturn_Execute(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		mockStorage := mock.NewMockStorage(ctrl)
-		handler := handlers.NewListReturn(mockStorage)
+		handler := NewListReturn(mockStorage)
 
 		limit := int64(10)
 		offset := int64(5)
