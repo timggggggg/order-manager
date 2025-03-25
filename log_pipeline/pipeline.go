@@ -16,7 +16,7 @@ type LogPipeline struct {
 	inputChan chan Log
 }
 
-func NewLogPipeline(ctx context.Context, filterWords []string, stdout io.Writer, pool *pgxpool.Pool) *LogPipeline {
+func NewLogPipeline(ctx context.Context, stdout io.Writer, pool *pgxpool.Pool) *LogPipeline {
 	inputDBChan := make(chan Log, 5)
 	stdinChan := make(chan Log, 5)
 

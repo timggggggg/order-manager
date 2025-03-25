@@ -51,14 +51,13 @@ func main() {
 	}
 
 	keywords := viper.GetStringSlice("keywords")
-	fmt.Println("keywords:", keywords)
 
 	filterWriter := &models.RequiredWordsWriter{
 		Writer:        os.Stdout,
 		RequiredWords: keywords,
 	}
 
-	logPipeline := logpipeline.NewLogPipeline(ctx, make([]string, 0), filterWriter, pool)
+	logPipeline := logpipeline.NewLogPipeline(ctx, filterWriter, pool)
 
 	go func() {
 		signalChan := make(chan os.Signal, 1)
