@@ -37,8 +37,8 @@ func newLRUCache(capacity int64) *LRUCache {
 }
 
 func (c *LRUCache) Get(key int64) *models.Order {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	if LRUnode, ok := c.cache[key]; ok {
 		c.moveToTail(LRUnode)

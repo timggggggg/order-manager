@@ -32,8 +32,8 @@ func newLFUCache(capacity int64) *LFUCache {
 }
 
 func (c *LFUCache) Get(key int64) *models.Order {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	elem, ok := c.keys[key]
 	if !ok {

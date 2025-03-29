@@ -3,6 +3,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
@@ -16,13 +17,20 @@ type PgFacade struct {
 	txManager    TransactionManager
 	pgRepository *PgRepository
 	cache        ICache
+	historyCache *OrderHistoryCache
 }
 
 func NewPgFacade(txManager TransactionManager, pgRepository *PgRepository, cache ICache) *PgFacade {
+	OrderHistoryCache := NewOrderHistoryCache(15*time.Second, pgRepository.GetAll, 100)
+
+	OrderHistoryCache.StartBackgroundRefresh()
+	defer OrderHistoryCache.Stop()
+
 	return &PgFacade{
 		txManager:    txManager,
 		pgRepository: pgRepository,
 		cache:        cache,
+		historyCache: OrderHistoryCache,
 	}
 }
 
@@ -49,6 +57,21 @@ func (s *PgFacade) GetByUserIDCursorPagination(ctx context.Context, userID int64
 
 func (s *PgFacade) GetAll(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error) {
 	var result models.OrdersSliceStorage
+
+	t := time.Now()
+	if limit+offset <= s.historyCache.Size && s.historyCache.LastUpdated.Add(1*time.Minute).After(t) {
+		ordersMP := s.historyCache.GetHistory()
+		for i, o := range ordersMP {
+			if i >= limit+offset {
+				break
+			}
+			if i >= offset {
+				result = append(result, o)
+			}
+		}
+
+		return result, nil
+	}
 
 	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
 		resultTemp, err := s.pgRepository.GetAll(ctx, limit, offset)
