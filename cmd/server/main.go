@@ -45,8 +45,6 @@ func main() {
 		log.Fatal("error newPgxPool", err)
 	}
 
-	storage := newPgFacade(pool)
-
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./cmd/server")
@@ -84,6 +82,8 @@ func main() {
 		pool.Close()
 		os.Exit(0)
 	}()
+
+	storage := newPgFacade(pool)
 
 	app := service.NewApp(storage)
 	app.Run()

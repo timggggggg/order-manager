@@ -21,9 +21,9 @@ type PgFacade struct {
 }
 
 func NewPgFacade(txManager TransactionManager, pgRepository *PgRepository, cache ICache) *PgFacade {
-	OrderHistoryCache := NewOrderHistoryCache(15*time.Second, pgRepository.GetAll, 100)
+	OrderHistoryCache := NewOrderHistoryCache(time.Duration(2)*time.Minute, pgRepository.GetAll, 100)
 
-	OrderHistoryCache.StartBackgroundRefresh()
+	go OrderHistoryCache.StartBackgroundRefresh(context.Background())
 	defer OrderHistoryCache.Stop()
 
 	return &PgFacade{
@@ -60,6 +60,7 @@ func (s *PgFacade) GetAll(ctx context.Context, limit int64, offset int64) (model
 
 	t := time.Now()
 	if limit+offset <= s.historyCache.Size && s.historyCache.LastUpdated.Add(1*time.Minute).After(t) {
+		result = make(models.OrdersSliceStorage, 0)
 		ordersMP := s.historyCache.GetHistory()
 		for i, o := range ordersMP {
 			if i >= limit+offset {

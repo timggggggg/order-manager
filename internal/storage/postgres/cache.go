@@ -31,9 +31,9 @@ func NewOrderHistoryCache(updateInterval time.Duration, fetchFunc func(ctx conte
 	}
 }
 
-func (c *OrderHistoryCache) StartBackgroundRefresh() {
+func (c *OrderHistoryCache) StartBackgroundRefresh(ctx context.Context) {
 	c.wg.Add(1)
-	go c.refreshLoop()
+	go c.refreshLoop(ctx)
 }
 
 func (c *OrderHistoryCache) Stop() {
@@ -48,7 +48,7 @@ func (c *OrderHistoryCache) GetHistory() models.OrdersMapStorage {
 	return c.orders
 }
 
-func (c *OrderHistoryCache) refreshLoop() {
+func (c *OrderHistoryCache) refreshLoop(ctx context.Context) {
 	timer := time.NewTimer(c.updateInterval)
 
 	defer c.wg.Done()
@@ -59,7 +59,8 @@ func (c *OrderHistoryCache) refreshLoop() {
 		case <-timer.C:
 			c.refreshCache()
 			timer.Reset(c.updateInterval)
-		case <-c.stopChan:
+		case <-ctx.Done():
+			fmt.Println("stop")
 			return
 		}
 	}
@@ -80,5 +81,5 @@ func (c *OrderHistoryCache) refreshCache() {
 	}
 
 	c.LastUpdated = time.Now()
-	fmt.Println("Cache updated at", c.LastUpdated)
+	fmt.Println("Cache updated at", models.FormatTime(c.LastUpdated))
 }
