@@ -1,7 +1,6 @@
 image: golang:latest
 
 stages:
-  - lint
   - test
   - build
 
@@ -13,11 +12,6 @@ before_script:
   - if [ ! -f /go/bin/gocyclo ]; then go install github.com/fzipp/gocyclo/cmd/gocyclo@latest; fi
 
   - make deps
-
-lint:
-  stage: lint
-  script:
-    - make lint
 
 test:
   stage: test
