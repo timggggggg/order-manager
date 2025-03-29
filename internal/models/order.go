@@ -10,7 +10,7 @@ type OrdersSliceStorage []*Order
 type OrdersMapStorage map[int64]*Order
 
 const (
-	StatusDefault    OrderStatus = ""
+	StatusDefault    OrderStatus = "nil"
 	StatusAccepted   OrderStatus = "accepted"
 	StatusExpired    OrderStatus = "expired"
 	StatusIssued     OrderStatus = "issued"
@@ -55,7 +55,7 @@ func NewOrder(ID, userID, storageDurationDays int64, acceptTime time.Time, weigh
 func (o *Order) String() string {
 	return fmt.Sprintf(
 		"\t Order(ID=%d, UserID=%d, Status=%s,\n\t AcceptTime=%s, ExpireTime=%s, IssueTime=%s,\n\t Weight=%f, Cost=%s, Packaging=%s, ExtraPackaging=%s)",
-		o.ID, o.UserID, o.Status, formatTime(o.AcceptTime), formatTime(o.ExpireTime), formatTime(o.IssueTime), o.Weight, o.Cost.String(), o.Package, o.ExtraPackage,
+		o.ID, o.UserID, o.Status, FormatTime(o.AcceptTime), FormatTime(o.ExpireTime), FormatTime(o.IssueTime), o.Weight, o.Cost.String(), o.Package, o.ExtraPackage,
 	)
 }
 
@@ -70,7 +70,7 @@ func (o *Order) LastStatusSwitchTime() time.Time {
 	return maxTime
 }
 
-func formatTime(t time.Time) string {
+func FormatTime(t time.Time) string {
 	if t.Equal(DefaultTime) {
 		return "nil"
 	}

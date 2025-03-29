@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type WithdrawStorage interface {
@@ -23,6 +25,7 @@ func NewWithdrawOrder(strg WithdrawStorage) *WithdrawOrder {
 
 func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	orderIDstr := r.URL.Query().Get("order_id")
 	if orderIDstr == "" {
@@ -46,4 +49,6 @@ func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+
+	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusWithdrawed)
 }

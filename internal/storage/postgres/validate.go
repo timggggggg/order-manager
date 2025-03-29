@@ -16,11 +16,13 @@ func validateReturn(order *OrderDB, userID int64) error {
 	if err := validateReturnExpired(order); err != nil {
 		return err
 	}
+	order.Status = "returned"
 	return nil
 }
 
 func validateReturnExpired(order *OrderDB) error {
 	if returnDeadline := order.IssueTime.Time.Add(models.MaxReturnTime); returnDeadline.Before(time.Now()) {
+		order.Status = "expired"
 		return models.ErrorOrderReturnExpired
 	}
 	return nil
@@ -44,6 +46,7 @@ func validateIssues(ordersMap OrdersDBMapStorage) error {
 		if err := validateIssue(order); err != nil {
 			return err
 		}
+		order.Status = "issued"
 	}
 	return nil
 }
@@ -76,5 +79,6 @@ func validateWithdraw(order *OrderDB) error {
 	if order.Status == string(models.StatusAccepted) && time.Now().Before(order.ExpireTime.Time) {
 		return models.ErrorOrderNotExpired
 	}
+	order.Status = "withdrawed"
 	return nil
 }

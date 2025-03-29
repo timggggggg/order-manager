@@ -1,13 +1,17 @@
 package service
 
 import (
+	"bytes"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type Storage interface {
@@ -77,11 +81,50 @@ func authMiddleware(handler http.Handler) http.Handler {
 	})
 }
 
+type ResponseWriterWrapper struct {
+	http.ResponseWriter
+	StatusCode int
+	Body       *bytes.Buffer
+}
+
+func (rw *ResponseWriterWrapper) WriteHeader(statusCode int) {
+	rw.StatusCode = statusCode
+	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (rw *ResponseWriterWrapper) Write(data []byte) (int, error) {
+	rw.Body.Write(data)
+	return rw.ResponseWriter.Write(data)
+}
+
 func logMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
-			log.Printf("Request: %s %s, Body: %v", r.Method, r.URL.Path, r.Body)
+		logPipeline := logpipeline.GetLogPipelineInstance()
+
+		var bodyBuffer bytes.Buffer
+
+		tee := io.TeeReader(r.Body, &bodyBuffer)
+
+		bodyBytes, err := io.ReadAll(tee)
+		if err != nil {
+			http.Error(w, "Unable to read request body", http.StatusInternalServerError)
+			return
 		}
-		next.ServeHTTP(w, r)
+
+		bodyString := string(bodyBytes)
+
+		r.Body = io.NopCloser(&bodyBuffer)
+
+		logPipeline.LogRequest(time.Now(), r.Method, r.URL.Path, bodyString)
+
+		wrappedWriter := &ResponseWriterWrapper{
+			ResponseWriter: w,
+			StatusCode:     http.StatusOK,
+			Body:           &bytes.Buffer{},
+		}
+
+		next.ServeHTTP(wrappedWriter, r)
+
+		logPipeline.LogResponse(time.Now(), int64(wrappedWriter.StatusCode), wrappedWriter.Body.String())
 	})
 }
