@@ -129,17 +129,8 @@ func (s *PgFacade) ReturnOrder(ctx context.Context, orderID int64, userID int64)
 
 func (s *PgFacade) returnOrder(ctx context.Context, id int64) (*OrderDB, error) {
 	var order *OrderDB
-	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
-		orderTemp, err := s.pgRepository.ReturnOrder(ctx, id)
-		if err != nil {
-			return err
-		}
 
-		order = orderTemp
-
-		return nil
-	})
-
+	order, err := s.pgRepository.ReturnOrder(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -176,17 +167,7 @@ func (s *PgFacade) IssueOrders(ctx context.Context, ids []int64) (models.OrdersS
 func (s *PgFacade) issueOrders(ctx context.Context, ids []int64) (OrdersDBSliceStorage, error) {
 	var orders OrdersDBSliceStorage
 
-	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
-		ordersTemp, err := s.pgRepository.IssueOrders(ctx, ids)
-		if err != nil {
-			return err
-		}
-
-		orders = ordersTemp
-
-		return nil
-	})
-
+	orders, err := s.pgRepository.IssueOrders(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
