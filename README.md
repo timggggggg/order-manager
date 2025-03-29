@@ -62,3 +62,11 @@ curl -u admin:password \
 curl -u admin:password \
 "http://localhost:9000/orders?limit=10&offset=0"
 ```
+
+## Взаимодействие с кэшем
+
+### Чтение (Read aside)
+![alt text](image_2025-03-29_17-32-59.png)
+
+### Запись (Write aside)
+![alt text](image_2025-03-29_17-32-48.png)
