@@ -13,11 +13,11 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
+	"gitlab.ozon.dev/timofey15g/homework/internal/logger"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
-	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
-	"gitlab.ozon.dev/timofey15g/homework/logger"
 )
 
 func main() {
