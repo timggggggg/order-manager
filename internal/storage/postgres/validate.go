@@ -76,6 +76,9 @@ func validateIssue(order *OrderDB) error {
 }
 
 func validateWithdraw(order *OrderDB) error {
+	if order.Status != string(models.StatusAccepted) && order.Status != string(models.StatusReturned) {
+		return models.ErrorOrderNotReturned
+	}
 	if order.Status == string(models.StatusAccepted) && time.Now().Before(order.ExpireTime.Time) {
 		return models.ErrorOrderNotExpired
 	}

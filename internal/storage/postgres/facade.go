@@ -7,15 +7,22 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
+type ICache interface {
+	Get(key int64) *models.Order
+	Put(key int64, value *models.Order)
+}
+
 type PgFacade struct {
 	txManager    TransactionManager
 	pgRepository *PgRepository
+	cache        ICache
 }
 
-func NewPgFacade(txManager TransactionManager, pgRepository *PgRepository) *PgFacade {
+func NewPgFacade(txManager TransactionManager, pgRepository *PgRepository, cache ICache) *PgFacade {
 	return &PgFacade{
 		txManager:    txManager,
 		pgRepository: pgRepository,
+		cache:        cache,
 	}
 }
 
@@ -85,7 +92,6 @@ func (s *PgFacade) GetReturnsLimitOffsetPagination(ctx context.Context, limit in
 
 func (s *PgFacade) CreateOrder(ctx context.Context, order *models.Order) error {
 	orderDB := ToDTO(order)
-
 	err := s.txManager.RunSerializable(ctx, func(ctxTx context.Context) error {
 		if err := s.pgRepository.CreateOrder(ctxTx, orderDB); err != nil {
 			return err
@@ -97,11 +103,39 @@ func (s *PgFacade) CreateOrder(ctx context.Context, order *models.Order) error {
 		return err
 	}
 
+	s.cache.Put(order.ID, order)
+
 	return nil
 }
 
 func (s *PgFacade) ReturnOrder(ctx context.Context, orderID int64, userID int64) (*models.Order, error) {
 	var orderDBupdated *OrderDB
+
+	order := s.cache.Get(orderID)
+	if order != nil {
+		orderDB := ToDTO(order)
+
+		err := validateReturn(orderDB, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		err = s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+			orderDBupdated, err = s.returnOrder(ctxTx, orderID)
+			return err
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		resultOrder := FromDTO(orderDBupdated)
+
+		s.cache.Put(orderID, resultOrder)
+
+		return resultOrder, nil
+	}
+
 	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
 		orderDB, err := s.pgRepository.GetByID(ctxTx, orderID)
 		if err != nil {
@@ -124,7 +158,10 @@ func (s *PgFacade) ReturnOrder(ctx context.Context, orderID int64, userID int64)
 		return nil, err
 	}
 
-	return FromDTO(orderDBupdated), nil
+	resultOrder := FromDTO(orderDBupdated)
+	s.cache.Put(orderID, resultOrder)
+
+	return resultOrder, nil
 }
 
 func (s *PgFacade) returnOrder(ctx context.Context, id int64) (*OrderDB, error) {
@@ -140,6 +177,44 @@ func (s *PgFacade) returnOrder(ctx context.Context, id int64) (*OrderDB, error) 
 
 func (s *PgFacade) IssueOrders(ctx context.Context, ids []int64) (models.OrdersSliceStorage, error) {
 	var orders OrdersDBSliceStorage
+
+	ordersMap := make(OrdersDBMapStorage)
+	succsessfulCacheLookup := true
+	for _, id := range ids {
+		o := s.cache.Get(id)
+		if o == nil {
+			succsessfulCacheLookup = false
+		}
+		ordersMap[id] = ToDTO(o)
+	}
+
+	if succsessfulCacheLookup {
+		err := validateIssues(ordersMap)
+		if err != nil {
+			return nil, err
+		}
+		err = s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+			orders, err = s.issueOrders(ctxTx, ids)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		result := FromOrdersDBSliceStorage(orders)
+
+		for _, o := range result {
+			s.cache.Put(o.ID, o)
+		}
+
+		return result, nil
+	}
+
 	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
 		ordersMap, err := s.pgRepository.GetByIDs(ctxTx, ids)
 		if err != nil {
@@ -161,7 +236,13 @@ func (s *PgFacade) IssueOrders(ctx context.Context, ids []int64) (models.OrdersS
 		return nil, err
 	}
 
-	return FromOrdersDBSliceStorage(orders), nil
+	result := FromOrdersDBSliceStorage(orders)
+
+	for _, o := range result {
+		s.cache.Put(o.ID, o)
+	}
+
+	return result, nil
 }
 
 func (s *PgFacade) issueOrders(ctx context.Context, ids []int64) (OrdersDBSliceStorage, error) {
@@ -177,6 +258,27 @@ func (s *PgFacade) issueOrders(ctx context.Context, ids []int64) (OrdersDBSliceS
 
 func (s *PgFacade) WithdrawOrder(ctx context.Context, id int64) (*models.Order, error) {
 	var order *models.Order
+
+	order = s.cache.Get(id)
+	if order != nil {
+		orderDB := ToDTO(order)
+
+		err := validateWithdraw(orderDB)
+		if err != nil {
+			return nil, err
+		}
+
+		err = s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
+			err = s.withdrawOrder(ctxTx, orderDB)
+			return err
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		return order, nil
+	}
 
 	err := s.txManager.RunReadCommitted(ctx, func(ctxTx context.Context) error {
 		orderDB, err := s.pgRepository.GetByID(ctxTx, id)

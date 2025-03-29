@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
+	storagecache "gitlab.ozon.dev/timofey15g/homework/internal/storage_cache"
 )
 
 func main() {
@@ -89,7 +92,20 @@ func main() {
 func newPgFacade(pool *pgxpool.Pool) *postgres.PgFacade {
 	txManager := postgres.NewTxManager(pool)
 	pgRepository := postgres.NewPgRepository(txManager)
-	return postgres.NewPgFacade(txManager, pgRepository)
+
+	cacheSize, err := strconv.ParseInt(os.Getenv("CACHE_SIZE"), 10, 64)
+	if err != nil {
+		panic(errors.New("invalid env variable CACHE_SIZE"))
+	}
+
+	cacheType := os.Getenv("CACHE_TYPE")
+
+	cache, err := storagecache.NewCacheStrategy(cacheType, cacheSize)
+	if err != nil {
+		panic(errors.New("invalid env variable CACHE_TYPE"))
+	}
+
+	return postgres.NewPgFacade(txManager, pgRepository, cache)
 }
 
 func newPgxPool(ctx context.Context, connectionString string) (*pgxpool.Pool, error) {
