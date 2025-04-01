@@ -29,7 +29,7 @@ func newPgFacade(t *testing.T, pool *pgxpool.Pool) *postgres.PgFacade {
 	if err != nil {
 		t.Fatal("Error while creating strategy")
 	}
-	return postgres.NewPgFacade(txManager, pgRepository, cache)
+	return postgres.NewPgFacade(txManager, pgRepository, cache, time.Now)
 }
 
 func newPgxPool(ctx context.Context, connectionString string) (*pgxpool.Pool, error) {

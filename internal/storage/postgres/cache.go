@@ -18,9 +18,10 @@ type OrderHistoryCache struct {
 	mu             *sync.RWMutex
 	Size           int64
 	wg             sync.WaitGroup
+	timeNow        func() time.Time
 }
 
-func NewOrderHistoryCache(updateInterval time.Duration, fetchFunc func(ctx context.Context, limit, offset int64) (OrdersDBSliceStorage, error), size int64) *OrderHistoryCache {
+func NewOrderHistoryCache(updateInterval time.Duration, fetchFunc func(ctx context.Context, limit, offset int64) (OrdersDBSliceStorage, error), size int64, timeNow func() time.Time) *OrderHistoryCache {
 	return &OrderHistoryCache{
 		orders:         make(models.OrdersMapStorage),
 		fetchFunc:      fetchFunc,
@@ -28,6 +29,7 @@ func NewOrderHistoryCache(updateInterval time.Duration, fetchFunc func(ctx conte
 		stopChan:       make(chan struct{}),
 		mu:             new(sync.RWMutex),
 		Size:           size,
+		timeNow:        timeNow,
 	}
 }
 
@@ -80,6 +82,6 @@ func (c *OrderHistoryCache) refreshCache() {
 		c.orders[o.ID] = FromDTO(o)
 	}
 
-	c.LastUpdated = time.Now()
+	c.LastUpdated = c.timeNow()
 	fmt.Println("Cache updated at", models.FormatTime(c.LastUpdated))
 }

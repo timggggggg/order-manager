@@ -100,12 +100,14 @@ func newPgFacade(pool *pgxpool.Pool) *postgres.PgFacade {
 
 	cacheType := os.Getenv("CACHE_TYPE")
 
-	cache, err := storagecache.NewCacheStrategy(cacheType, cacheSize)
+	cacheStrat, err := storagecache.NewCacheStrategy(cacheType, cacheSize)
 	if err != nil {
 		panic(errors.New("invalid env variable CACHE_TYPE"))
 	}
 
-	return postgres.NewPgFacade(txManager, pgRepository, cache)
+	cache := storagecache.NewCache(cacheStrat)
+
+	return postgres.NewPgFacade(txManager, pgRepository, cache, time.Now)
 }
 
 func newPgxPool(ctx context.Context, connectionString string) (*pgxpool.Pool, error) {

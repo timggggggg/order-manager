@@ -18,10 +18,11 @@ type PgFacade struct {
 	pgRepository *PgRepository
 	cache        ICache
 	historyCache *OrderHistoryCache
+	timeNow      func() time.Time
 }
 
-func NewPgFacade(txManager TransactionManager, pgRepository *PgRepository, cache ICache) *PgFacade {
-	OrderHistoryCache := NewOrderHistoryCache(time.Duration(2)*time.Minute, pgRepository.GetAll, 100)
+func NewPgFacade(txManager TransactionManager, pgRepository *PgRepository, cache ICache, timeNow func() time.Time) *PgFacade {
+	OrderHistoryCache := NewOrderHistoryCache(time.Duration(2)*time.Minute, pgRepository.GetAll, 100, time.Now)
 
 	go OrderHistoryCache.StartBackgroundRefresh(context.Background())
 	defer OrderHistoryCache.Stop()
@@ -31,6 +32,7 @@ func NewPgFacade(txManager TransactionManager, pgRepository *PgRepository, cache
 		pgRepository: pgRepository,
 		cache:        cache,
 		historyCache: OrderHistoryCache,
+		timeNow:      timeNow,
 	}
 }
 
@@ -58,7 +60,7 @@ func (s *PgFacade) GetByUserIDCursorPagination(ctx context.Context, userID int64
 func (s *PgFacade) GetAll(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error) {
 	var result models.OrdersSliceStorage
 
-	t := time.Now()
+	t := s.timeNow()
 	if limit+offset <= s.historyCache.Size && s.historyCache.LastUpdated.Add(1*time.Minute).After(t) {
 		result = make(models.OrdersSliceStorage, 0)
 		ordersMP := s.historyCache.GetHistory()
@@ -199,18 +201,23 @@ func (s *PgFacade) returnOrder(ctx context.Context, id int64) (*OrderDB, error) 
 	return order, nil
 }
 
-func (s *PgFacade) IssueOrders(ctx context.Context, ids []int64) (models.OrdersSliceStorage, error) {
-	var orders OrdersDBSliceStorage
-
+func (s *PgFacade) getOrdersMap(ids []int64) (OrdersDBMapStorage, bool) {
 	ordersMap := make(OrdersDBMapStorage)
-	succsessfulCacheLookup := true
 	for _, id := range ids {
 		o := s.cache.Get(id)
 		if o == nil {
-			succsessfulCacheLookup = false
+			return nil, false
 		}
 		ordersMap[id] = ToDTO(o)
 	}
+
+	return ordersMap, true
+}
+
+func (s *PgFacade) IssueOrders(ctx context.Context, ids []int64) (models.OrdersSliceStorage, error) {
+	var orders OrdersDBSliceStorage
+
+	ordersMap, succsessfulCacheLookup := s.getOrdersMap(ids)
 
 	if succsessfulCacheLookup {
 		err := validateIssues(ordersMap)

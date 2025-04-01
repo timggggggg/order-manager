@@ -29,10 +29,10 @@ func validateReturnExpired(order *OrderDB) error {
 }
 
 func validateReturnOrderStatus(order *OrderDB) error {
-	if order.Status == string(models.StatusReturned) {
+	if order.IsReturned() {
 		return models.ErrorOrderAlreadyReturned
 	}
-	if order.Status == string(models.StatusAccepted) {
+	if order.IsAccepted() {
 		return models.ErrorOrderNotIssued
 	}
 	return nil
@@ -63,10 +63,10 @@ func validateSameUser(ordersMap OrdersDBMapStorage) error {
 }
 
 func validateIssue(order *OrderDB) error {
-	if order.Status == string(models.StatusReturned) {
+	if order.IsReturned() {
 		return models.ErrorOrderAlreadyReturned
 	}
-	if order.Status == string(models.StatusIssued) {
+	if order.IsIssued() {
 		return models.ErrorOrderAlreadyIssued
 	}
 	if order.ExpireTime.Time.Before(time.Now()) {
@@ -76,10 +76,10 @@ func validateIssue(order *OrderDB) error {
 }
 
 func validateWithdraw(order *OrderDB) error {
-	if order.Status != string(models.StatusAccepted) && order.Status != string(models.StatusReturned) {
+	if !order.IsAccepted() && !order.IsReturned() {
 		return models.ErrorOrderNotReturned
 	}
-	if order.Status == string(models.StatusAccepted) && time.Now().Before(order.ExpireTime.Time) {
+	if order.IsAccepted() && time.Now().Before(order.ExpireTime.Time) {
 		return models.ErrorOrderNotExpired
 	}
 	order.Status = "withdrawed"
