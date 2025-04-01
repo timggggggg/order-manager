@@ -19,12 +19,17 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
+	storagecache "gitlab.ozon.dev/timofey15g/homework/internal/storage_cache"
 )
 
-func newPgFacade(pool *pgxpool.Pool) *postgres.PgFacade {
+func newPgFacade(t *testing.T, pool *pgxpool.Pool) *postgres.PgFacade {
 	txManager := postgres.NewTxManager(pool)
 	pgRepository := postgres.NewPgRepository(txManager)
-	return postgres.NewPgFacade(txManager, pgRepository)
+	cache, err := storagecache.NewCacheStrategy("DEFAULT", int64(0))
+	if err != nil {
+		t.Fatal("Error while creating strategy")
+	}
+	return postgres.NewPgFacade(txManager, pgRepository, cache, time.Now)
 }
 
 func newPgxPool(ctx context.Context, connectionString string) (*pgxpool.Pool, error) {
@@ -62,7 +67,7 @@ func setupTest(t *testing.T) *postgres.PgFacade {
 		pool.Close()
 	})
 
-	return newPgFacade(pool)
+	return newPgFacade(t, pool)
 }
 
 func TestAcceptOrder_Execute_integration(t *testing.T) {

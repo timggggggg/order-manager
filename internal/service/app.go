@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
-	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
 )
 
 type Storage interface {

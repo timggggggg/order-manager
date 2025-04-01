@@ -79,3 +79,23 @@ func FromOrdersDBMapStorage(ordersMap OrdersDBMapStorage) models.OrdersMapStorag
 
 	return result
 }
+
+func (o *OrderDB) IsAccepted() bool {
+	return o.Status == string(models.StatusAccepted)
+}
+
+func (o *OrderDB) IsExpired() bool {
+	return o.Status == string(models.StatusExpired)
+}
+
+func (o *OrderDB) IsIssued() bool {
+	return o.Status == string(models.StatusIssued)
+}
+
+func (o *OrderDB) IsReturned() bool {
+	return o.Status == string(models.StatusReturned)
+}
+
+func (o *OrderDB) IsWithdrawed() bool {
+	return o.Status == string(models.StatusWithdrawed)
+}

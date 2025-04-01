@@ -1,10 +1,28 @@
+version: "2"
 linters:
   enable:
     - gocognit
     - gocyclo
-
-linters-settings:
-  gocyclo:
-    min-complexity: 10
-  gocognit:
-    min-complexity: 10
+  settings:
+    gocognit:
+      min-complexity: 10
+    gocyclo:
+      min-complexity: 10
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

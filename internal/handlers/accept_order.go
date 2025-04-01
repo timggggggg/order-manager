@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/packaging"
-	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type OrderJSON struct {
