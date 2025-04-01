@@ -6,8 +6,8 @@ stages:
   - build
 
 before_script:
-  - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-  - golangci-lint --version
+  - go clean -modcache
+  - go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.0.2
   - go install github.com/uudashr/gocognit/cmd/gocognit@latest
   - go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
 
