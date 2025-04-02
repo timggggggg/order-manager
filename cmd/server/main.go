@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -13,11 +15,12 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
+	"gitlab.ozon.dev/timofey15g/homework/internal/logger"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
-	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
-	"gitlab.ozon.dev/timofey15g/homework/logger"
+	storagecache "gitlab.ozon.dev/timofey15g/homework/internal/storage_cache"
 )
 
 func main() {
@@ -41,8 +44,6 @@ func main() {
 	if err != nil {
 		log.Fatal("error newPgxPool", err)
 	}
-
-	storage := newPgFacade(pool)
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -82,6 +83,8 @@ func main() {
 		os.Exit(0)
 	}()
 
+	storage := newPgFacade(pool)
+
 	app := service.NewApp(storage)
 	app.Run()
 }
@@ -89,7 +92,22 @@ func main() {
 func newPgFacade(pool *pgxpool.Pool) *postgres.PgFacade {
 	txManager := postgres.NewTxManager(pool)
 	pgRepository := postgres.NewPgRepository(txManager)
-	return postgres.NewPgFacade(txManager, pgRepository)
+
+	cacheSize, err := strconv.ParseInt(os.Getenv("CACHE_SIZE"), 10, 64)
+	if err != nil {
+		panic(errors.New("invalid env variable CACHE_SIZE"))
+	}
+
+	cacheType := os.Getenv("CACHE_TYPE")
+
+	cacheStrat, err := storagecache.NewCacheStrategy(cacheType, cacheSize)
+	if err != nil {
+		panic(errors.New("invalid env variable CACHE_TYPE"))
+	}
+
+	cache := storagecache.NewCache(cacheStrat)
+
+	return postgres.NewPgFacade(txManager, pgRepository, cache, time.Now)
 }
 
 func newPgxPool(ctx context.Context, connectionString string) (*pgxpool.Pool, error) {

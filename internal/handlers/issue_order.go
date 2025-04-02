@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	logpipeline "gitlab.ozon.dev/timofey15g/homework/log_pipeline"
 )
 
 type IssueStorage interface {
