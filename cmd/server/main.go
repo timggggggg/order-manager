@@ -15,6 +15,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 
+	"gitlab.ozon.dev/timofey15g/homework/internal/kafka"
 	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
 	"gitlab.ozon.dev/timofey15g/homework/internal/logger"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
@@ -73,12 +74,29 @@ func main() {
 	logPipeline.SetWorkerPools(dbPool, stdoutPool)
 	logPipeline.SetInputChan(inputDBChan)
 
+	brokers := []string{"localhost:9092"}
+
+	outboxWorkerPool, err := kafka.NewOutboxWorkerPool(2, pool, brokers, "logs", 500*time.Millisecond)
+	if err != nil {
+		log.Fatalf("error creating outboxWorkerPool: %v", err)
+	}
+
+	consumerWorkerPool, err := kafka.NewConsumerWorkerPool(1, brokers, "logs")
+	if err != nil {
+		log.Fatalf("error creating consumerWorkerPool: %v", err)
+	}
+
+	outboxWorkerPool.Start(ctx)
+	consumerWorkerPool.Start(ctx)
+
 	go func() {
 		signalChan := make(chan os.Signal, 1)
 		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 		<-signalChan
 		cancel()
 		logPipeline.Shutdown()
+		outboxWorkerPool.Shutdown()
+		consumerWorkerPool.Shutdown()
 		pool.Close()
 		os.Exit(0)
 	}()

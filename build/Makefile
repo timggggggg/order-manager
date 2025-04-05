@@ -1,6 +1,7 @@
 
 all:
 	cd db && make;
+	cd kafka && make;
 
 compose-up:
 	cd db && make compose-up;
