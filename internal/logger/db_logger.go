@@ -9,6 +9,18 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
+type Task struct {
+	OrderID     int64              `json:"order_id,omitempty"`
+	StatusFrom  models.OrderStatus `json:"status_from,omitempty"`
+	StatusTo    models.OrderStatus `json:"status_to,omitempty"`
+	Timestamp   time.Time          `json:"ts"`
+	Method      string             `json:"method,omitempty"`
+	URL         string             `json:"url,omitempty"`
+	RequestBody string             `json:"request_body,omitempty"`
+	StatusCode  int64              `json:"status_code,omitempty"`
+	Body        string             `json:"body,omitempty"`
+}
+
 type DBLogger struct {
 	pool *pgxpool.Pool
 }
@@ -31,14 +43,14 @@ func (l *DBLogger) LogStatusChange(ctx context.Context, ts time.Time, id int64, 
 		return
 	}
 
-	jsonData := map[string]interface{}{
-		"order_id":    id,
-		"status_from": statusFrom,
-		"status_to":   statusTo,
-		"ts":          ts,
+	task := &Task{
+		OrderID:    id,
+		StatusFrom: statusFrom,
+		StatusTo:   statusTo,
+		Timestamp:  ts,
 	}
 
-	err = outboxInsert(ctx, tx, jsonData)
+	err = outboxInsert(ctx, tx, task)
 	if err != nil {
 		return
 	}
@@ -56,14 +68,14 @@ func (l *DBLogger) LogRequest(ctx context.Context, ts time.Time, method, url, re
 		return
 	}
 
-	jsonData := map[string]interface{}{
-		"ts":           ts,
-		"method":       method,
-		"url":          url,
-		"request_body": request_body,
+	task := &Task{
+		Timestamp:   ts,
+		Method:      method,
+		URL:         url,
+		RequestBody: request_body,
 	}
 
-	err = outboxInsert(ctx, tx, jsonData)
+	err = outboxInsert(ctx, tx, task)
 	if err != nil {
 		return
 	}
@@ -81,26 +93,26 @@ func (l *DBLogger) LogResponse(ctx context.Context, ts time.Time, code int64, bo
 		return
 	}
 
-	jsonData := map[string]interface{}{
-		"ts":          ts,
-		"status_code": code,
-		"body":        body,
+	task := &Task{
+		Timestamp:  ts,
+		StatusCode: code,
+		Body:       body,
 	}
 
-	err = outboxInsert(ctx, tx, jsonData)
+	err = outboxInsert(ctx, tx, task)
 	if err != nil {
 		return
 	}
 }
 
-func outboxInsert(ctx context.Context, tx *pgxpool.Pool, jsonData map[string]interface{}) error {
+func outboxInsert(ctx context.Context, tx *pgxpool.Pool, jsonData *Task) error {
 	result, err := json.Marshal(jsonData)
 	if err != nil {
 		return err
 	}
 
 	query := `
-		INSERT INTO outbox (audit_log)
+		INSERT INTO tasks (payload)
 		VALUES ($1)
 	`
 

@@ -19,6 +19,7 @@ import (
 	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
 	"gitlab.ozon.dev/timofey15g/homework/internal/logger"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	"gitlab.ozon.dev/timofey15g/homework/internal/outbox"
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
 	storagecache "gitlab.ozon.dev/timofey15g/homework/internal/storage_cache"
@@ -75,13 +76,22 @@ func main() {
 	logPipeline.SetInputChan(inputDBChan)
 
 	brokers := []string{"localhost:9092"}
+	tasksTable := "tasks"
+	topic := "logs"
 
-	outboxWorkerPool, err := kafka.NewOutboxWorkerPool(2, pool, brokers, "logs", 500*time.Millisecond)
+	producer, err := kafka.NewKafkaProducer(brokers)
+	if err != nil {
+		panic(fmt.Errorf("error creating kafka producer: %w", err))
+	}
+
+	ob := outbox.NewOutbox(pool, tasksTable, producer, topic)
+
+	outboxWorkerPool, err := outbox.NewOutboxWorkerPool(2, ob, 500*time.Millisecond)
 	if err != nil {
 		log.Fatalf("error creating outboxWorkerPool: %v", err)
 	}
 
-	consumerWorkerPool, err := kafka.NewConsumerWorkerPool(1, brokers, "logs")
+	consumerWorkerPool, err := outbox.NewConsumerWorkerPool(1, brokers, topic)
 	if err != nil {
 		log.Fatalf("error creating consumerWorkerPool: %v", err)
 	}
