@@ -59,12 +59,9 @@ func (o *Outbox) ProcessBatch(ctx context.Context) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var id int64
-		var auditJSON []byte
-		var status models.TaskStatus
-		var attempts int
+		var task models.OutboxTask
 
-		if err := rows.Scan(&id, &auditJSON, &status, &attempts); err != nil {
+		if err := rows.Scan(&task.ID, &task.Payload, &task.Status, &task.AttemptsLeft); err != nil {
 			log.Printf("Scan failed: %v", err)
 			continue
 		}
@@ -75,12 +72,12 @@ func (o *Outbox) ProcessBatch(ctx context.Context) {
             WHERE id = $2
         `, o.tableName)
 
-		attempts -= 1
+		task.AttemptsLeft -= 1
 
 		_, err = o.pool.Exec(ctx,
 			query,
-			attempts,
-			id,
+			task.AttemptsLeft,
+			task.ID,
 			models.TaskStatusProcessing,
 		)
 
@@ -89,14 +86,14 @@ func (o *Outbox) ProcessBatch(ctx context.Context) {
 			continue
 		}
 
-		err = o.producer.SendMessage(o.topic, auditJSON)
+		err = o.producer.SendMessage(o.topic, task.Payload)
 
-		status = models.TaskStatusCompleted
+		task.Status = models.TaskStatusCompleted
 		if err != nil {
 			log.Printf("Kafka send failed: %v", err)
-			status = models.TaskStatusFailed
-			if attempts == 0 {
-				status = models.TaskStatusNoAttemptsLeft
+			task.Status = models.TaskStatusFailed
+			if task.AttemptsLeft == 0 {
+				task.Status = models.TaskStatusNoAttemptsLeft
 			}
 		}
 
@@ -106,7 +103,7 @@ func (o *Outbox) ProcessBatch(ctx context.Context) {
             WHERE id = $1
         `, o.tableName)
 
-		_, err = o.pool.Exec(ctx, query, id, status)
+		_, err = o.pool.Exec(ctx, query, task.ID, task.Status)
 		if err != nil {
 			log.Printf("Completion failed: %v", err)
 		}

@@ -9,18 +9,6 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
-type Task struct {
-	OrderID     int64              `json:"order_id,omitempty"`
-	StatusFrom  models.OrderStatus `json:"status_from,omitempty"`
-	StatusTo    models.OrderStatus `json:"status_to,omitempty"`
-	Timestamp   time.Time          `json:"ts"`
-	Method      string             `json:"method,omitempty"`
-	URL         string             `json:"url,omitempty"`
-	RequestBody string             `json:"request_body,omitempty"`
-	StatusCode  int64              `json:"status_code,omitempty"`
-	Body        string             `json:"body,omitempty"`
-}
-
 type DBLogger struct {
 	pool *pgxpool.Pool
 }
@@ -43,12 +31,19 @@ func (l *DBLogger) LogStatusChange(ctx context.Context, ts time.Time, id int64, 
 		return
 	}
 
-	task := &Task{
+	payload := &models.StatusChangeLog{
 		OrderID:    id,
 		StatusFrom: statusFrom,
 		StatusTo:   statusTo,
 		Timestamp:  ts,
 	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+
+	task := models.NewOutboxTask(models.TaskTypeStatusChangeLog, payloadBytes, 3)
 
 	err = outboxInsert(ctx, tx, task)
 	if err != nil {
@@ -68,12 +63,19 @@ func (l *DBLogger) LogRequest(ctx context.Context, ts time.Time, method, url, re
 		return
 	}
 
-	task := &Task{
+	payload := &models.HttpReqLog{
 		Timestamp:   ts,
 		Method:      method,
 		URL:         url,
 		RequestBody: request_body,
 	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+
+	task := models.NewOutboxTask(models.TaskTypeHttpReqLog, payloadBytes, 3)
 
 	err = outboxInsert(ctx, tx, task)
 	if err != nil {
@@ -93,11 +95,18 @@ func (l *DBLogger) LogResponse(ctx context.Context, ts time.Time, code int64, bo
 		return
 	}
 
-	task := &Task{
+	payload := &models.HttpRespLog{
 		Timestamp:  ts,
 		StatusCode: code,
 		Body:       body,
 	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+
+	task := models.NewOutboxTask(models.TaskTypeHttpRespLog, payloadBytes, 3)
 
 	err = outboxInsert(ctx, tx, task)
 	if err != nil {
@@ -105,18 +114,13 @@ func (l *DBLogger) LogResponse(ctx context.Context, ts time.Time, code int64, bo
 	}
 }
 
-func outboxInsert(ctx context.Context, tx *pgxpool.Pool, jsonData *Task) error {
-	result, err := json.Marshal(jsonData)
-	if err != nil {
-		return err
-	}
-
+func outboxInsert(ctx context.Context, tx *pgxpool.Pool, task *models.OutboxTask) error {
 	query := `
-		INSERT INTO tasks (payload)
-		VALUES ($1)
+		INSERT INTO tasks (task_type, payload, status, attempts_left)
+		VALUES ($1, $2, $3, $4)
 	`
 
-	_, err = tx.Exec(ctx, query, result)
+	_, err := tx.Exec(ctx, query, task.Type, task.Payload, task.Status, task.AttemptsLeft)
 
 	return err
 }

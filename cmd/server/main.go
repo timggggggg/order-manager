@@ -91,7 +91,7 @@ func main() {
 		log.Fatalf("error creating outboxWorkerPool: %v", err)
 	}
 
-	consumerWorkerPool, err := outbox.NewConsumerWorkerPool(1, brokers, topic)
+	consumerWorkerPool, err := kafka.NewConsumerWorkerPool(1, brokers, topic)
 	if err != nil {
 		log.Fatalf("error creating consumerWorkerPool: %v", err)
 	}
