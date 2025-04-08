@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,6 +36,43 @@ func NewOutbox(pool *pgxpool.Pool, tableName string, producer IProducer, topic s
 
 func (o *Outbox) CloseProducer() {
 	o.producer.Close()
+}
+
+func (o *Outbox) RenewTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		http.Error(w, "id is not provided", http.StatusBadRequest)
+		return
+	}
+
+	ID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	query := fmt.Sprintf(`
+		UPDATE %s
+		SET status = $1, updated_at = NOW(), attempts_left = $2
+		WHERE id = $3
+	`, o.tableName)
+
+	_, err = o.pool.Exec(ctx,
+		query,
+		models.TaskStatusCreated,
+		3,
+		ID,
+	)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("task renew failed: %v", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, "task id=%d renewed!\n", ID)
 }
 
 func (o *Outbox) ProcessBatch(ctx context.Context) {

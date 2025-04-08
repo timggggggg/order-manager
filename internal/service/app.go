@@ -24,12 +24,17 @@ type Storage interface {
 	handlers.ListHistoryStorage
 }
 
-type App struct {
-	storage Storage
+type Outbox interface {
+	RenewTask(w http.ResponseWriter, r *http.Request)
 }
 
-func NewApp(storage Storage) *App {
-	return &App{storage}
+type App struct {
+	storage Storage
+	outbox  Outbox
+}
+
+func NewApp(storage Storage, outbox Outbox) *App {
+	return &App{storage, outbox}
 }
 
 type Handler interface {
@@ -55,6 +60,8 @@ func (app *App) Run() {
 	router.HandleFunc("/orders/user", hs["list_order"].Execute).Methods(http.MethodGet)
 	router.HandleFunc("/orders/returns", hs["list_return"].Execute).Methods(http.MethodGet)
 	router.HandleFunc("/orders", hs["list_history"].Execute).Methods(http.MethodGet)
+
+	router.HandleFunc("/tasks/reset", app.outbox.RenewTask).Methods(http.MethodPost)
 
 	router.Use(authMiddleware)
 

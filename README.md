@@ -63,6 +63,13 @@ curl -u admin:password \
 "http://localhost:9000/orders?limit=10&offset=0"
 ```
 
+### 8. Обновить задачу по ID
+Параметры: `id`
+```bash
+curl -u admin:password -X POST \
+"http://localhost:9000/tasks/reset?id=1"
+```
+
 ## Взаимодействие с кэшем
 
 ### Чтение (Read aside)

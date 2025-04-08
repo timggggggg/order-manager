@@ -113,7 +113,7 @@ func main() {
 
 	storage := newPgFacade(pool)
 
-	app := service.NewApp(storage)
+	app := service.NewApp(storage, ob)
 	app.Run()
 }
 
