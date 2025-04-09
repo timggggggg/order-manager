@@ -52,7 +52,7 @@ func NewWorkerPool(workersCount, batchSize int, timeout time.Duration, logger IL
 func (wp *WorkerPool) Start(ctx context.Context, input chan Log, next chan Log) {
 	wp.input = input
 	wp.next = next
-	for i := 0; i < wp.workersCount; i++ {
+	for range wp.workersCount {
 		wp.wg.Add(1)
 		go wp.runWorker(ctx)
 	}
@@ -107,13 +107,13 @@ func (wp *WorkerPool) processBatch(ctx context.Context, batch []Log) {
 			fmt.Println("invalid log")
 		}
 	}
-	fmt.Println("batch processed")
+	// fmt.Println("batch processed")
 	if wp.next != nil {
 		for _, b := range batch {
 			wp.next <- b
 		}
 	}
-	fmt.Println("batch gone to the next worker")
+	// fmt.Println("batch gone to the next worker")
 }
 
 func (wp *WorkerPool) Shutdown() {

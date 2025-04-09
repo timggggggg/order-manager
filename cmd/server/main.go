@@ -15,9 +15,11 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 
+	"gitlab.ozon.dev/timofey15g/homework/internal/kafka"
 	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
 	"gitlab.ozon.dev/timofey15g/homework/internal/logger"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	"gitlab.ozon.dev/timofey15g/homework/internal/outbox"
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
 	storagecache "gitlab.ozon.dev/timofey15g/homework/internal/storage_cache"
@@ -73,19 +75,46 @@ func main() {
 	logPipeline.SetWorkerPools(dbPool, stdoutPool)
 	logPipeline.SetInputChan(inputDBChan)
 
+	brokers := []string{"localhost:9092"}
+	tasksTable := "tasks"
+	topic := "logs"
+	maxAttempts := 3
+
+	producer, err := kafka.NewKafkaProducer(brokers)
+	if err != nil {
+		panic(fmt.Errorf("error creating kafka producer: %w", err))
+	}
+
+	ob := outbox.NewOutbox(pool, tasksTable, producer, topic, int64(maxAttempts))
+
+	outboxWorkerPool, err := outbox.NewOutboxWorkerPool(2, ob, 500*time.Millisecond)
+	if err != nil {
+		log.Fatalf("error creating outboxWorkerPool: %v", err)
+	}
+
+	consumerWorkerPool, err := kafka.NewConsumerWorkerPool(1, brokers, topic)
+	if err != nil {
+		log.Fatalf("error creating consumerWorkerPool: %v", err)
+	}
+
+	outboxWorkerPool.Start(ctx)
+	consumerWorkerPool.Start(ctx)
+
 	go func() {
 		signalChan := make(chan os.Signal, 1)
 		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 		<-signalChan
 		cancel()
 		logPipeline.Shutdown()
+		outboxWorkerPool.Shutdown()
+		consumerWorkerPool.Shutdown()
 		pool.Close()
 		os.Exit(0)
 	}()
 
 	storage := newPgFacade(pool)
 
-	app := service.NewApp(storage)
+	app := service.NewApp(storage, ob)
 	app.Run()
 }
 
