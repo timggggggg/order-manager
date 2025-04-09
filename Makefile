@@ -7,7 +7,7 @@ all: run
 run: build
 	./$(BINARY_NAME)
 
-build: deps lint
+build: deps
 	go build -o $(BINARY_NAME) $(MAIN_FILE)
 
 deps:
