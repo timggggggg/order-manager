@@ -78,13 +78,14 @@ func main() {
 	brokers := []string{"localhost:9092"}
 	tasksTable := "tasks"
 	topic := "logs"
+	maxAttempts := 3
 
 	producer, err := kafka.NewKafkaProducer(brokers)
 	if err != nil {
 		panic(fmt.Errorf("error creating kafka producer: %w", err))
 	}
 
-	ob := outbox.NewOutbox(pool, tasksTable, producer, topic)
+	ob := outbox.NewOutbox(pool, tasksTable, producer, topic, int64(maxAttempts))
 
 	outboxWorkerPool, err := outbox.NewOutboxWorkerPool(2, ob, 500*time.Millisecond)
 	if err != nil {

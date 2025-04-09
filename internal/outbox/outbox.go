@@ -19,18 +19,20 @@ type IProducer interface {
 }
 
 type Outbox struct {
-	pool      *pgxpool.Pool
-	tableName string
-	producer  IProducer
-	topic     string
+	pool        *pgxpool.Pool
+	tableName   string
+	producer    IProducer
+	topic       string
+	MaxAttempts int64
 }
 
-func NewOutbox(pool *pgxpool.Pool, tableName string, producer IProducer, topic string) *Outbox {
+func NewOutbox(pool *pgxpool.Pool, tableName string, producer IProducer, topic string, maxAttempts int64) *Outbox {
 	return &Outbox{
-		pool:      pool,
-		tableName: tableName,
-		producer:  producer,
-		topic:     topic,
+		pool:        pool,
+		tableName:   tableName,
+		producer:    producer,
+		topic:       topic,
+		MaxAttempts: maxAttempts,
 	}
 }
 
@@ -62,7 +64,7 @@ func (o *Outbox) RenewTask(w http.ResponseWriter, r *http.Request) {
 	_, err = o.pool.Exec(ctx,
 		query,
 		models.TaskStatusCreated,
-		3,
+		o.MaxAttempts,
 		ID,
 	)
 

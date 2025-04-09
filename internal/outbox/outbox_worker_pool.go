@@ -10,7 +10,6 @@ import (
 type OutboxWorkerPool struct {
 	outbox       *Outbox
 	interval     time.Duration
-	maxRetries   int
 	workersCount int
 	wg           sync.WaitGroup
 }
@@ -19,7 +18,6 @@ func NewOutboxWorkerPool(workersCount int, outbox *Outbox, interval time.Duratio
 	return &OutboxWorkerPool{
 		outbox:       outbox,
 		interval:     interval,
-		maxRetries:   3,
 		workersCount: workersCount,
 	}, nil
 }
