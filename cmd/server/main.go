@@ -23,6 +23,7 @@ import (
 	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
 	"gitlab.ozon.dev/timofey15g/homework/internal/logger"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	"gitlab.ozon.dev/timofey15g/homework/internal/mw"
 	"gitlab.ozon.dev/timofey15g/homework/internal/outbox"
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
@@ -127,7 +128,9 @@ func main() {
 		log.Fatalf("error creating listener: %v", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(mw.Log),
+	)
 	desc.RegisterOrderServiceServer(grpcServer, service)
 
 	go runMetricsServer()

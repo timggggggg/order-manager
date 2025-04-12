@@ -42,6 +42,22 @@ var (
 			Help: "Total revenue from completed orders",
 		},
 	)
+
+	okRespByHandlerTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "order_ok_response",
+			Help: "total number of ok responses",
+		},
+		[]string{"handler"},
+	)
+
+	badRespByHandlerTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "order_bad_response",
+			Help: "total number of bad responses",
+		},
+		[]string{"handler"},
+	)
 )
 
 func IncrementOrdersCreated() {
@@ -58,4 +74,16 @@ func IncrementErrorCounter(errorType string) {
 
 func AddToRevenue(amount float64) {
 	revenueTotal.Add(amount)
+}
+
+func IncOkRespByHandler(handler string) {
+	okRespByHandlerTotal.With(prometheus.Labels{
+		"handler": handler,
+	}).Inc()
+}
+
+func IncBadRespByHandler(handler string) {
+	badRespByHandlerTotal.With(prometheus.Labels{
+		"handler": handler,
+	}).Inc()
 }

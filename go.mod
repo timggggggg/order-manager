@@ -9,6 +9,7 @@ require (
 	github.com/golang/protobuf v1.5.0
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.7.2
+	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/viper v1.20.0
 	github.com/stretchr/testify v1.10.0
