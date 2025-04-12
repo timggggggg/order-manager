@@ -6,10 +6,13 @@ require (
 	github.com/IBM/sarama v1.45.1
 	github.com/georgysavva/scany/v2 v2.1.3
 	github.com/golang/mock v1.6.0
+	github.com/golang/protobuf v1.5.0
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/spf13/viper v1.20.0
 	github.com/stretchr/testify v1.10.0
+	google.golang.org/grpc v1.67.3
+	google.golang.org/protobuf v1.36.1
 )
 
 require (
@@ -43,6 +46,7 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

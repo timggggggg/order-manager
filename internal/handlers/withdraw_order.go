@@ -1,31 +1,23 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
-	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
-	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
-type WithdrawStorage interface {
-	WithdrawOrder(ctx context.Context, id int64) (*models.Order, error)
-}
-
 type WithdrawOrder struct {
-	strg WithdrawStorage
+	client pb.OrderServiceClient
 }
 
-func NewWithdrawOrder(strg WithdrawStorage) *WithdrawOrder {
-	return &WithdrawOrder{strg}
+func NewWithdrawOrder(client pb.OrderServiceClient) *WithdrawOrder {
+	return &WithdrawOrder{client}
 }
 
 func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	orderIDstr := r.URL.Query().Get("order_id")
 	if orderIDstr == "" {
@@ -39,16 +31,16 @@ func (cmd *WithdrawOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := cmd.strg.WithdrawOrder(ctx, orderID)
+	req := &pb.TReqWithdrawOrder{
+		OrderID: orderID,
+	}
+
+	resp, err := cmd.client.WithdrawOrder(ctx, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(order)
-	if err != nil {
-		return
-	}
-
-	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusAccepted, models.StatusWithdrawed)
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprint(w, resp.Msg)
 }

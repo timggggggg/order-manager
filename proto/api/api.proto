@@ -1,0 +1,37 @@
+syntax = "proto3";
+package NApi;
+
+option go_package = "gitlab.ozon.dev/timofey15g/homework/pkg/api;api";
+
+import "google/protobuf/timestamp.proto";
+
+
+enum TPackagingType {
+  default = 0; 
+  bag = 1;
+  box = 2;
+  film = 3;
+}
+
+enum TOrderStatus {
+  nil = 0; 
+  accepted = 1;
+  expired = 2;
+  issued = 3;
+  returned = 4;
+  withdrawed = 5;
+}
+
+
+message TOrder {
+  int64 ID = 1;
+  int64 UserID = 2;
+  TOrderStatus Status = 3;
+  google.protobuf.Timestamp AcceptTime = 4;
+  google.protobuf.Timestamp ExpireTime = 5;
+  google.protobuf.Timestamp IssueTime = 6;
+  double Weight = 7;
+  string Cost = 8;
+  TPackagingType Packaging = 9;
+  TPackagingType ExtraPackaging = 10;
+}

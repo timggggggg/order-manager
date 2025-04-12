@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/kafka"
 	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
@@ -23,12 +25,14 @@ import (
 	"gitlab.ozon.dev/timofey15g/homework/internal/service"
 	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
 	storagecache "gitlab.ozon.dev/timofey15g/homework/internal/storage_cache"
+	desc "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
 func main() {
 	err := godotenv.Load("cmd/server/.env")
 	if err != nil {
-		fmt.Println("Error loading .env file")
+		fmt.Printf("Error loading .env file: %v", err)
+		return
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -114,8 +118,19 @@ func main() {
 
 	storage := newPgFacade(pool)
 
-	app := service.NewApp(storage, ob)
-	app.Run()
+	service := service.NewService(storage, ob)
+
+	listener, err := net.Listen("tcp", ":5252")
+	if err != nil {
+		log.Fatalf("error creating listener: %v", err)
+	}
+
+	grpcServer := grpc.NewServer()
+	desc.RegisterOrderServiceServer(grpcServer, service)
+
+	if err := grpcServer.Serve(listener); err != nil {
+		log.Fatalf("serve error: %v", err)
+	}
 }
 
 func newPgFacade(pool *pgxpool.Pool) *postgres.PgFacade {
