@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
@@ -128,8 +130,17 @@ func main() {
 	grpcServer := grpc.NewServer()
 	desc.RegisterOrderServiceServer(grpcServer, service)
 
+	go runMetricsServer()
+
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("serve error: %v", err)
+	}
+}
+
+func runMetricsServer() {
+	http.Handle("/metrics", promhttp.Handler())
+	if err := http.ListenAndServe("localhost:8099", nil); err != nil {
+		log.Fatalf("failed to listen and serve metrics: %v", err)
 	}
 }
 

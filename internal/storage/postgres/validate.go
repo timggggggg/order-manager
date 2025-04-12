@@ -3,6 +3,7 @@ package postgres
 import (
 	"time"
 
+	"gitlab.ozon.dev/timofey15g/homework/internal/metrics"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 )
 
@@ -16,13 +17,15 @@ func validateReturn(order *OrderDB, userID int64) error {
 	if err := validateReturnExpired(order); err != nil {
 		return err
 	}
-	order.Status = "returned"
+	order.Status = string(models.StatusReturned)
+	metrics.UpdateOrderStatus(order.Status)
 	return nil
 }
 
 func validateReturnExpired(order *OrderDB) error {
 	if returnDeadline := order.IssueTime.Time.Add(models.MaxReturnTime); returnDeadline.Before(time.Now()) {
-		order.Status = "expired"
+		order.Status = string(models.StatusExpired)
+		metrics.UpdateOrderStatus(order.Status)
 		return models.ErrorOrderReturnExpired
 	}
 	return nil
@@ -46,7 +49,8 @@ func validateIssues(ordersMap OrdersDBMapStorage) error {
 		if err := validateIssue(order); err != nil {
 			return err
 		}
-		order.Status = "issued"
+		order.Status = string(models.StatusIssued)
+		metrics.UpdateOrderStatus(order.Status)
 	}
 	return nil
 }
@@ -82,6 +86,7 @@ func validateWithdraw(order *OrderDB) error {
 	if order.IsAccepted() && time.Now().Before(order.ExpireTime.Time) {
 		return models.ErrorOrderNotExpired
 	}
-	order.Status = "withdrawed"
+	order.Status = string(models.StatusWithdrawed)
+	metrics.UpdateOrderStatus(order.Status)
 	return nil
 }

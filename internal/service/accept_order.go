@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
+	"gitlab.ozon.dev/timofey15g/homework/internal/metrics"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/packaging"
 	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
@@ -13,6 +15,9 @@ import (
 
 func (s *Service) CreateOrder(ctx context.Context, req *pb.TReqAcceptOrder) (*pb.TStringResp, error) {
 	logPipeline := logpipeline.GetLogPipelineInstance()
+
+	timer := prometheus.NewTimer(metrics.RequestDuration.WithLabelValues("create_order", "POST"))
+	defer timer.ObserveDuration()
 
 	packagingStrategy, err := packaging.NewPackagingStrategy(req.Package, packaging.PackagingStrategies)
 	if err != nil {
@@ -42,8 +47,13 @@ func (s *Service) CreateOrder(ctx context.Context, req *pb.TReqAcceptOrder) (*pb
 
 	err = s.storage.CreateOrder(ctx, order)
 	if err != nil {
+		metrics.IncrementErrorCounter(err.Error())
 		return nil, err
 	}
+
+	metrics.IncrementOrdersCreated()
+	metrics.AddToRevenue(float64(order.Cost.Amount))
+
 	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusDefault, models.StatusAccepted)
 
 	return &pb.TStringResp{
