@@ -129,7 +129,7 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(mw.Log),
+		grpc.ChainUnaryInterceptor(mw.Logging),
 	)
 	desc.RegisterOrderServiceServer(grpcServer, service)
 
