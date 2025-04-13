@@ -1,14 +1,14 @@
 -- +goose Up
 -- +goose StatementBegin
 create type packaging_type as enum (
-    '',
+    'default',
     'bag',
     'box',
     'film'
 );
 
 create type ostatus as enum (
-    'nil',
+    'unknown',
     'accepted',
     'expired',
     'issued',
@@ -26,7 +26,7 @@ create table if not exists orders (
 
     weight float not null,
     cost varchar(255) not null,
-    package packaging_type not null default '',
+    package packaging_type not null default 'default',
     extra_package packaging_type
 );
 -- +goose StatementEnd
