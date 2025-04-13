@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
-	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
 func TestWithdrawOrder_Execute(t *testing.T) {
@@ -19,17 +18,14 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("success", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewWithdrawOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewWithdrawOrder(mockOrderServiceClient)
 
 		orderID := int64(123)
-		expectedOrder := &models.Order{
-			ID: orderID,
-		}
 
-		mockStorage.EXPECT().
-			WithdrawOrder(gomock.Any(), orderID).
-			Return(expectedOrder, nil)
+		mockOrderServiceClient.EXPECT().
+			WithdrawOrder(gomock.Any(), &pb.TReqWithdrawOrder{OrderID: orderID}).
+			Return(&pb.TStringResp{Msg: ""}, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id="+strconv.FormatInt(orderID, 10), nil)
 		rec := httptest.NewRecorder()
@@ -38,15 +34,12 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var actualOrder models.Order
-		err := json.NewDecoder(rec.Body).Decode(&actualOrder)
-		assert.NoError(t, err)
-		assert.Equal(t, *expectedOrder, actualOrder)
+		assert.Equal(t, rec.Body.String(), "")
 	})
 
 	t.Run("missing order_id", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewWithdrawOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewWithdrawOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
@@ -57,8 +50,8 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("invalid order_id", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewWithdrawOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewWithdrawOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=invalid", nil)
 		rec := httptest.NewRecorder()
@@ -69,12 +62,12 @@ func TestWithdrawOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("storage error", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewWithdrawOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewWithdrawOrder(mockOrderServiceClient)
 
 		orderID := int64(123)
-		mockStorage.EXPECT().
-			WithdrawOrder(gomock.Any(), orderID).
+		mockOrderServiceClient.EXPECT().
+			WithdrawOrder(gomock.Any(), &pb.TReqWithdrawOrder{OrderID: orderID}).
 			Return(nil, errors.New("storage error"))
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id="+strconv.FormatInt(orderID, 10), nil)

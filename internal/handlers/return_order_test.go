@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
-	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
 func TestReturnOrder_Execute(t *testing.T) {
@@ -20,14 +19,15 @@ func TestReturnOrder_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("success", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewReturnOrder(mockOrderServiceClient)
 
 		orderID := int64(123)
 		userID := int64(456)
-		expectedOrder := &models.Order{ID: orderID, UserID: userID}
 
-		mockStorage.EXPECT().ReturnOrder(gomock.Any(), orderID, userID).Return(expectedOrder, nil)
+		mockOrderServiceClient.EXPECT().
+			ReturnOrder(gomock.Any(), &pb.TReqReturnOrder{OrderID: orderID, UserID: userID}).
+			Return(&pb.TStringResp{Msg: ""}, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id="+strconv.FormatInt(orderID, 10)+"&user_id="+strconv.FormatInt(userID, 10), nil)
 		rec := httptest.NewRecorder()
@@ -36,15 +36,12 @@ func TestReturnOrder_Execute(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var actualOrder models.Order
-		err := json.NewDecoder(rec.Body).Decode(&actualOrder)
-		assert.NoError(t, err)
-		assert.Equal(t, *expectedOrder, actualOrder)
+		assert.Equal(t, rec.Body.String(), "")
 	})
 
 	t.Run("missing order_id", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewReturnOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/?user_id=456", nil)
 		rec := httptest.NewRecorder()
@@ -55,8 +52,8 @@ func TestReturnOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("missing user_id", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewReturnOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=123", nil)
 		rec := httptest.NewRecorder()
@@ -67,8 +64,8 @@ func TestReturnOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("invalid order_id", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewReturnOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=abc&user_id=456", nil)
 		rec := httptest.NewRecorder()
@@ -79,8 +76,8 @@ func TestReturnOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("invalid user_id", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewReturnOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id=123&user_id=abc", nil)
 		rec := httptest.NewRecorder()
@@ -91,13 +88,15 @@ func TestReturnOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("storage error", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewReturnOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewReturnOrder(mockOrderServiceClient)
 
 		orderID := int64(123)
 		userID := int64(456)
 
-		mockStorage.EXPECT().ReturnOrder(gomock.Any(), orderID, userID).Return(nil, errors.New("storage error"))
+		mockOrderServiceClient.EXPECT().
+			ReturnOrder(gomock.Any(), &pb.TReqReturnOrder{OrderID: orderID, UserID: userID}).
+			Return(nil, errors.New("storage error"))
 
 		req := httptest.NewRequest(http.MethodGet, "/?order_id="+strconv.FormatInt(orderID, 10)+"&user_id="+strconv.FormatInt(userID, 10), nil)
 		rec := httptest.NewRecorder()
