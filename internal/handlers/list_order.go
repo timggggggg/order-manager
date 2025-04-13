@@ -1,24 +1,20 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
-type ListOrderStorage interface {
-	GetByUserIDCursorPagination(ctx context.Context, userID int64, limit int64, cursorID int64) (models.OrdersSliceStorage, error)
-}
-
 type ListOrder struct {
-	strg ListOrderStorage
+	client pb.OrderServiceClient
 }
 
-func NewListOrder(strg ListOrderStorage) *ListOrder {
-	return &ListOrder{strg}
+func NewListOrder(client pb.OrderServiceClient) *ListOrder {
+	return &ListOrder{client}
 }
 
 func (cmd *ListOrder) Execute(w http.ResponseWriter, r *http.Request) {
@@ -60,13 +56,19 @@ func (cmd *ListOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orders, err := cmd.strg.GetByUserIDCursorPagination(ctx, userID, limit, cursorID)
+	req := &pb.TReqListOrders{
+		UserID:   userID,
+		Limit:    limit,
+		CursorID: cursorID,
+	}
+
+	resp, err := cmd.client.ListOrders(ctx, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(orders)
+	err = json.NewEncoder(w).Encode(models.OrdersSliceProtoToModel(resp.Orders))
 	if err != nil {
 		return
 	}

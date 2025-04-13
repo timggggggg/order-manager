@@ -1,0 +1,72 @@
+syntax = "proto3";
+package NService;
+
+option go_package = "gitlab.ozon.dev/timofey15g/homework/pkg/service;service";
+
+import "api/api.proto";
+
+service OrderService {
+  rpc CreateOrder(TReqAcceptOrder) returns (TStringResp) {}
+  rpc IssueOrder(TReqIssueOrder) returns (TStringResp) {}
+  rpc ListHistory(TReqListHistory) returns (TListResp) {}
+  rpc ListOrders(TReqListOrders) returns (TListResp) {}
+  rpc ListReturns(TReqListReturns) returns (TListResp) {}
+  rpc ReturnOrder(TReqReturnOrder) returns (TStringResp) {}
+  rpc WithdrawOrder(TReqWithdrawOrder) returns (TStringResp) {}
+  rpc RenewTask(TReqRenewTask) returns (TStringResp) {}
+}
+
+message TReqAcceptOrder {
+  int64 ID = 1;
+  int64 UserID = 2;     
+  int64 StorageDurationDays = 3;
+  double Weight = 4;
+  string Cost = 5;
+  string Package = 6;
+  string ExtraPackage = 7;
+}
+
+message TReqIssueOrder {
+  repeated int64 Ids = 1;
+}
+
+message TReqListHistory {
+  int64 Limit = 1;
+  int64 Offset = 2;
+}
+
+message TReqListOrders {
+  int64 UserID = 1;
+  int64 Limit = 2;
+  int64 CursorID = 3;
+}
+
+message TReqListReturns {
+  int64 Limit = 1;
+  int64 Offset = 2;
+}
+
+message TReqReturnOrder {
+  int64 OrderID = 1;
+  int64 UserID = 2;
+}
+
+message TReqWithdrawOrder {
+  int64 OrderID = 1;
+}
+
+message TReqRenewTask {
+  int64 TaskID = 1;
+}
+
+message TStringResp {
+  string Msg = 1;
+}
+
+message TResp {
+  NApi.TOrder Order = 1;
+}
+
+message TListResp {
+  repeated NApi.TOrder Orders = 1;
+}

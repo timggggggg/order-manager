@@ -13,6 +13,7 @@ import (
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
 func TestListHistory_Execute(t *testing.T) {
@@ -20,8 +21,8 @@ func TestListHistory_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("success", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListHistory(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewListHistory(mockOrderServiceClient)
 
 		limit := int64(10)
 		offset := int64(0)
@@ -31,7 +32,9 @@ func TestListHistory_Execute(t *testing.T) {
 			models.NewOrder(3, 3, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 		}
 
-		mockStorage.EXPECT().GetAll(gomock.Any(), limit, offset).Return(expectedOrders, nil)
+		mockOrderServiceClient.EXPECT().
+			ListHistory(gomock.Any(), &pb.TReqListHistory{Limit: limit, Offset: offset}).
+			Return(&pb.TListResp{Orders: models.OrdersSliceModelToProto(expectedOrders)}, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/orders/?limit="+strconv.FormatInt(limit, 10)+"&offset="+strconv.FormatInt(offset, 10), nil)
 		w := httptest.NewRecorder()
@@ -46,8 +49,8 @@ func TestListHistory_Execute(t *testing.T) {
 	})
 
 	t.Run("missing limit", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListHistory(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewListHistory(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/orders/?offset=0", nil)
 		w := httptest.NewRecorder()
@@ -58,8 +61,8 @@ func TestListHistory_Execute(t *testing.T) {
 	})
 
 	t.Run("invalid limit", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListHistory(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewListHistory(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/orders/?limit=abc&offset=0", nil)
 		w := httptest.NewRecorder()
@@ -70,12 +73,14 @@ func TestListHistory_Execute(t *testing.T) {
 	})
 
 	t.Run("storage error", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListHistory(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewListHistory(mockOrderServiceClient)
 
 		limit := int64(10)
 		offset := int64(0)
-		mockStorage.EXPECT().GetAll(gomock.Any(), limit, offset).Return(nil, errors.New("storage error"))
+		mockOrderServiceClient.EXPECT().
+			ListHistory(gomock.Any(), &pb.TReqListHistory{Limit: limit, Offset: offset}).
+			Return(nil, errors.New("storage error"))
 
 		req := httptest.NewRequest(http.MethodGet, "/orders/?limit="+strconv.FormatInt(limit, 10)+"&offset="+strconv.FormatInt(offset, 10), nil)
 		w := httptest.NewRecorder()

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
-	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
 func TestIssueOrder_Execute(t *testing.T) {
@@ -20,20 +20,14 @@ func TestIssueOrder_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("success", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewIssueOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewIssueOrder(mockOrderServiceClient)
 
 		ids := []int64{1, 2, 3}
 
-		expectedOrders := models.OrdersSliceStorage{
-			models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-			models.NewOrder(2, 2, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-			models.NewOrder(3, 3, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
-		}
-
-		mockStorage.EXPECT().
-			IssueOrders(gomock.Any(), ids).
-			Return(expectedOrders, nil)
+		mockOrderServiceClient.EXPECT().
+			IssueOrder(gomock.Any(), &pb.TReqIssueOrder{Ids: ids}).
+			Return(&pb.TStringResp{Msg: "orders issued!"}, nil)
 
 		body, _ := json.Marshal(ids)
 		req := httptest.NewRequest(http.MethodPost, "/orders/issue", bytes.NewReader(body))
@@ -42,14 +36,12 @@ func TestIssueOrder_Execute(t *testing.T) {
 		handler.Execute(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
-		var actualOrders models.OrdersSliceStorage
-		err := json.NewDecoder(rec.Body).Decode(&actualOrders)
-		assert.NoError(t, err)
+		assert.Equal(t, "orders issued!", rec.Body.String())
 	})
 
 	t.Run("invalid request body", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewIssueOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewIssueOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodPost, "/orders/issue", bytes.NewReader([]byte("invalid body")))
 		rec := httptest.NewRecorder()
@@ -61,12 +53,13 @@ func TestIssueOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("storage error", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewIssueOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewIssueOrder(mockOrderServiceClient)
 
 		ids := []int64{1, 2, 3}
-		mockStorage.EXPECT().
-			IssueOrders(gomock.Any(), ids).
+
+		mockOrderServiceClient.EXPECT().
+			IssueOrder(gomock.Any(), &pb.TReqIssueOrder{Ids: ids}).
 			Return(nil, errors.New("storage error"))
 
 		body, _ := json.Marshal(ids)

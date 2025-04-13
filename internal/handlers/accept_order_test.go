@@ -12,10 +12,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
 	"gitlab.ozon.dev/timofey15g/homework/internal/packaging"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
 func TestAcceptOrder_Execute(t *testing.T) {
@@ -23,8 +25,8 @@ func TestAcceptOrder_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("success", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewAcceptOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewAcceptOrder(mockOrderServiceClient)
 
 		orderJSON := OrderJSON{
 			ID:                  1,
@@ -48,12 +50,12 @@ func TestAcceptOrder_Execute(t *testing.T) {
 		order := models.NewOrder(orderJSON.ID, orderJSON.UserID, orderJSON.StorageDurationDays, acceptTime,
 			orderJSON.Weight, money, packagingStrategy.Type(), extraPackagingStrategy.Type())
 
-		mockStorage.EXPECT().
-			CreateOrder(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(ctx context.Context, o *models.Order) error {
-				assert.Equal(t, order.ID, o.ID)
-				assert.Equal(t, order.UserID, o.UserID)
-				return nil
+		mockOrderServiceClient.EXPECT().
+			CreateOrder(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, r *pb.TReqAcceptOrder, opts ...grpc.CallOption) (*pb.TStringResp, error) {
+				assert.Equal(t, order.ID, r.ID)
+				assert.Equal(t, order.UserID, r.UserID)
+				return &pb.TStringResp{Msg: "Order accepted successfully"}, nil
 			})
 
 		handler.Execute(rec, req)
@@ -62,8 +64,8 @@ func TestAcceptOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("invalid request body", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewAcceptOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewAcceptOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewReader([]byte("invalid body")))
 		rec := httptest.NewRecorder()
@@ -75,8 +77,8 @@ func TestAcceptOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("storage error", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewAcceptOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewAcceptOrder(mockOrderServiceClient)
 
 		orderJSON := OrderJSON{
 			ID:                  1,
@@ -92,9 +94,9 @@ func TestAcceptOrder_Execute(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewReader(body))
 		rec := httptest.NewRecorder()
 
-		mockStorage.EXPECT().
-			CreateOrder(gomock.Any(), gomock.Any()).
-			Return(errors.New("storage error"))
+		mockOrderServiceClient.EXPECT().
+			CreateOrder(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, errors.New("error accepting order: storage error"))
 
 		handler.Execute(rec, req)
 

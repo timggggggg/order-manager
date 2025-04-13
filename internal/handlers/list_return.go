@@ -1,24 +1,20 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
-type ListReturnStorage interface {
-	GetReturnsLimitOffsetPagination(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error)
-}
-
 type ListReturn struct {
-	strg ListReturnStorage
+	client pb.OrderServiceClient
 }
 
-func NewListReturn(strg ListReturnStorage) *ListReturn {
-	return &ListReturn{strg}
+func NewListReturn(client pb.OrderServiceClient) *ListReturn {
+	return &ListReturn{client}
 }
 
 func (cmd *ListReturn) Execute(w http.ResponseWriter, r *http.Request) {
@@ -48,13 +44,18 @@ func (cmd *ListReturn) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orders, err := cmd.strg.GetReturnsLimitOffsetPagination(ctx, limit, offset)
+	req := &pb.TReqListReturns{
+		Limit:  limit,
+		Offset: offset,
+	}
+
+	resp, err := cmd.client.ListReturns(ctx, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(orders)
+	err = json.NewEncoder(w).Encode(models.OrdersSliceProtoToModel(resp.Orders))
 	if err != nil {
 		return
 	}
