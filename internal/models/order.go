@@ -10,7 +10,7 @@ type OrdersSliceStorage []*Order
 type OrdersMapStorage map[int64]*Order
 
 const (
-	StatusDefault    OrderStatus = "nil"
+	StatusDefault    OrderStatus = "unknown"
 	StatusAccepted   OrderStatus = "accepted"
 	StatusExpired    OrderStatus = "expired"
 	StatusIssued     OrderStatus = "issued"

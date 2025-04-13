@@ -21,7 +21,11 @@ func Logging(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler g
 		span.LogKV("method", info.FullMethod, "metadata", md)
 	}
 
-	rewReq, _ := protojson.Marshal((req).(proto.Message))
+	rewReq, err := protojson.Marshal((req).(proto.Message))
+	if err != nil {
+		return nil, err
+	}
+
 	log.Printf("method: %s; request: %s", info.FullMethod, string(rewReq))
 	span.LogKV("request", string(rewReq))
 
@@ -35,7 +39,11 @@ func Logging(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler g
 		return nil, err
 	}
 
-	respReq, _ := protojson.Marshal((res).(proto.Message))
+	respReq, err := protojson.Marshal((res).(proto.Message))
+	if err != nil {
+		return nil, err
+	}
+
 	log.Printf("method: %s; response: %s", info.FullMethod, string(respReq))
 	span.LogKV("response", string(respReq))
 

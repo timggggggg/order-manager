@@ -8,9 +8,7 @@ import (
 )
 
 func (s *Service) RenewTask(ctx context.Context, req *pb.TReqRenewTask) (*pb.TStringResp, error) {
-	err := s.outbox.RenewTask(ctx, req.TaskID)
-
-	if err != nil {
+	if err := s.outbox.RenewTask(ctx, req.TaskID); err != nil {
 		return nil, err
 	}
 

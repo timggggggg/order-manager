@@ -63,16 +63,16 @@ func (s *Service) CreateOrder(ctx context.Context, req *pb.TReqAcceptOrder) (*pb
 
 func validatePackaging(order *models.Order, packagingStrategy packaging.Strategy, extraPackagingStrategy packaging.Strategy) (*models.Money, error) {
 	if packagingStrategy.Type() == models.PackagingFilm && extraPackagingStrategy.Type() == models.PackagingFilm {
-		return &models.Money{Amount: 0}, models.ErrorPackagingFilmTwice
+		return &models.Money{}, models.ErrorPackagingFilmTwice
 	}
 
 	packageCost, err := packagingStrategy.CalculateCost(order.Weight)
 	if err != nil {
-		return &models.Money{Amount: 0}, err
+		return &models.Money{}, err
 	}
 	extraPackageCost, err := extraPackagingStrategy.CalculateCost(order.Weight)
 	if err != nil {
-		return &models.Money{Amount: 0}, err
+		return &models.Money{}, err
 	}
 
 	packageCost.Add(extraPackageCost.Amount)

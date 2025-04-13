@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"gitlab.ozon.dev/timofey15g/homework/pkg/api"
@@ -23,8 +24,11 @@ func OrderModelToProto(order *Order) *api.TOrder {
 }
 
 func OrderProtoToModel(order *api.TOrder) *Order {
+	cost, err := NewMoney(order.Cost)
+	if err != nil {
+		fmt.Printf("error pasrsing money string: %v", err)
+	}
 
-	cost, _ := NewMoney(order.Cost)
 	return &Order{
 		ID:           order.ID,
 		UserID:       order.UserID,

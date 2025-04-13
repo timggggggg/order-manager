@@ -142,7 +142,7 @@ func main() {
 
 func runMetricsServer() {
 	http.Handle("/metrics", promhttp.Handler())
-	if err := http.ListenAndServe("localhost:8099", nil); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:8099", nil); err != nil {
 		log.Fatalf("failed to listen and serve metrics: %v", err)
 	}
 }
