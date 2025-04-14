@@ -1,15 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
-	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
-	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/internal/packaging"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
 type OrderJSON struct {
@@ -22,21 +18,16 @@ type OrderJSON struct {
 	ExtraPackage        string  `json:"extra_package,omitempty"`
 }
 
-type AcceptStorage interface {
-	CreateOrder(ctx context.Context, order *models.Order) error
-}
-
 type AcceptOrder struct {
-	strg AcceptStorage
+	client pb.OrderServiceClient
 }
 
-func NewAcceptOrder(strg AcceptStorage) *AcceptOrder {
-	return &AcceptOrder{strg}
+func NewAcceptOrder(client pb.OrderServiceClient) *AcceptOrder {
+	return &AcceptOrder{client}
 }
 
 func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	var orderJSON OrderJSON
 	if err := json.NewDecoder(r.Body).Decode(&orderJSON); err != nil {
@@ -44,58 +35,23 @@ func (cmd *AcceptOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	packagingStrategy, err := packaging.NewPackagingStrategy(orderJSON.Package, packaging.PackagingStrategies)
+	req := &pb.TReqAcceptOrder{
+		ID:                  orderJSON.ID,
+		UserID:              orderJSON.UserID,
+		StorageDurationDays: orderJSON.StorageDurationDays,
+		Weight:              orderJSON.Weight,
+		Cost:                orderJSON.Cost,
+		Package:             orderJSON.Package,
+		ExtraPackage:        orderJSON.ExtraPackage,
+	}
+
+	resp, err := cmd.client.CreateOrder(ctx, req)
+
 	if err != nil {
-		http.Error(w, fmt.Sprintf("error creating packaging strategy: %v", err), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	extraPackagingStrategy, err := packaging.NewPackagingStrategy(orderJSON.ExtraPackage, packaging.ExtraPackagingStrategies)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error creating extra packaging strategy: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	acceptTime := time.Now()
-	money, err := models.NewMoney(orderJSON.Cost)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	order := models.NewOrder(orderJSON.ID, orderJSON.UserID, orderJSON.StorageDurationDays, acceptTime,
-		orderJSON.Weight, money, packagingStrategy.Type(), extraPackagingStrategy.Type())
-
-	packageCost, err := validatePackaging(order, packagingStrategy, extraPackagingStrategy)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error validating order: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	order.Cost.Add(packageCost.Amount)
-
-	err = cmd.strg.CreateOrder(ctx, order)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error accepting order: %v", err), http.StatusInternalServerError)
-		return
-	}
-	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusDefault, models.StatusAccepted)
-}
-
-func validatePackaging(order *models.Order, packagingStrategy packaging.Strategy, extraPackagingStrategy packaging.Strategy) (*models.Money, error) {
-	if packagingStrategy.Type() == models.PackagingFilm && extraPackagingStrategy.Type() == models.PackagingFilm {
-		return &models.Money{Amount: 0}, models.ErrorPackagingFilmTwice
-	}
-
-	packageCost, err := packagingStrategy.CalculateCost(order.Weight)
-	if err != nil {
-		return &models.Money{Amount: 0}, err
-	}
-	extraPackageCost, err := extraPackagingStrategy.CalculateCost(order.Weight)
-	if err != nil {
-		return &models.Money{Amount: 0}, err
-	}
-
-	packageCost.Add(extraPackageCost.Amount)
-
-	return packageCost, nil
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprint(w, resp.Msg)
 }

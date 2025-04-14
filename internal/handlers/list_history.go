@@ -1,24 +1,20 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
-type ListHistoryStorage interface {
-	GetAll(ctx context.Context, limit int64, offset int64) (models.OrdersSliceStorage, error)
-}
-
 type ListHistory struct {
-	strg ListHistoryStorage
+	client pb.OrderServiceClient
 }
 
-func NewListHistory(strg ListHistoryStorage) *ListHistory {
-	return &ListHistory{strg}
+func NewListHistory(client pb.OrderServiceClient) *ListHistory {
+	return &ListHistory{client}
 }
 
 func (cmd *ListHistory) Execute(w http.ResponseWriter, r *http.Request) {
@@ -48,13 +44,18 @@ func (cmd *ListHistory) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orders, err := cmd.strg.GetAll(ctx, limit, offset)
+	req := &pb.TReqListHistory{
+		Limit:  limit,
+		Offset: offset,
+	}
+
+	resp, err := cmd.client.ListHistory(ctx, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(orders)
+	err = json.NewEncoder(w).Encode(models.OrdersSliceProtoToModel(resp.Orders))
 	if err != nil {
 		return
 	}

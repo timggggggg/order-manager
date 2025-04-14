@@ -3,78 +3,37 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
-	"gitlab.ozon.dev/timofey15g/homework/internal/storage/postgres"
-	storagecache "gitlab.ozon.dev/timofey15g/homework/internal/storage_cache"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
-func newPgFacade(t *testing.T, pool *pgxpool.Pool) *postgres.PgFacade {
-	txManager := postgres.NewTxManager(pool)
-	pgRepository := postgres.NewPgRepository(txManager)
-	cache, err := storagecache.NewCacheStrategy("DEFAULT", int64(0))
+func setupTest(t *testing.T) pb.OrderServiceClient {
+	conn, err := grpc.NewClient("localhost:5252", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		t.Fatal("Error while creating strategy")
-	}
-	return postgres.NewPgFacade(txManager, pgRepository, cache, time.Now)
-}
-
-func newPgxPool(ctx context.Context, connectionString string) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, connectionString)
-	if err != nil {
-		return nil, err
-	}
-	return pool, nil
-}
-
-func setupTest(t *testing.T) *postgres.PgFacade {
-	err := godotenv.Load(".env.example")
-	if err != nil {
-		t.Fatal("Error loading .env file")
+		t.Fatalf("failed to create grpc client: %v", err)
 	}
 
-	ctx := context.Background()
+	clnt := pb.NewOrderServiceClient(conn)
 
-	user := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	host := os.Getenv("POSTGRES_HOST")
-	port := os.Getenv("POSTGRES_PORT")
-	db := os.Getenv("POSTGRES_DB")
-	sslMode := os.Getenv("SSL_MODE")
-
-	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, password, host, port, db, sslMode)
-
-	pool, err := newPgxPool(ctx, connectionString)
-	if err != nil {
-		t.Fatal("error newPgxPool", err)
-	}
-
-	t.Cleanup(func() {
-		pool.Exec(ctx, "TRUNCATE TABLE orders RESTART IDENTITY CASCADE")
-		pool.Close()
-	})
-
-	return newPgFacade(t, pool)
+	return clnt
 }
 
 func TestAcceptOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
-		storage := setupTest(t)
+		client := setupTest(t)
 
-		handler := handlers.NewAcceptOrder(storage)
+		handler := handlers.NewAcceptOrder(client)
 
 		orderJSON := handlers.OrderJSON{
 			ID:                  1,
@@ -97,8 +56,8 @@ func TestAcceptOrder_Execute_integration(t *testing.T) {
 	})
 
 	t.Run("invalid request body", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewAcceptOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewAcceptOrder(client)
 
 		invalidBody := `{"id": "invalid_id"}`
 		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewReader([]byte(invalidBody)))
@@ -113,8 +72,8 @@ func TestAcceptOrder_Execute_integration(t *testing.T) {
 
 func TestIssueOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewIssueOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewIssueOrder(client)
 		expectedOrders := models.OrdersSliceStorage{
 			models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 			models.NewOrder(2, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -122,7 +81,17 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 		}
 
 		for i := range expectedOrders {
-			err := storage.CreateOrder(t.Context(), expectedOrders[i])
+			req := &pb.TReqAcceptOrder{
+				ID:                  expectedOrders[i].ID,
+				UserID:              expectedOrders[i].UserID,
+				StorageDurationDays: 36500,
+				Weight:              expectedOrders[i].Weight,
+				Cost:                "100",
+				Package:             string(expectedOrders[i].Package),
+				ExtraPackage:        string(expectedOrders[i].ExtraPackage),
+			}
+
+			_, err := client.CreateOrder(t.Context(), req)
 			assert.NoError(t, err)
 		}
 
@@ -144,8 +113,8 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 	})
 
 	t.Run("invalid request body", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewIssueOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewIssueOrder(client)
 
 		req := httptest.NewRequest(http.MethodPost, "/issue", bytes.NewReader([]byte("invalid json")))
 		w := httptest.NewRecorder()
@@ -158,9 +127,9 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
-	t.Run("storage error", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewIssueOrder(storage)
+	t.Run("client error", func(t *testing.T) {
+		client := setupTest(t)
+		handler := handlers.NewIssueOrder(client)
 
 		requestBody, _ := json.Marshal([]int64{1, 2})
 		req := httptest.NewRequest(http.MethodPost, "/issue", bytes.NewReader(requestBody))
@@ -176,8 +145,8 @@ func TestIssueOrder_Execute_integration(t *testing.T) {
 }
 
 func TestListHistory_Execute_integration(t *testing.T) {
-	storage := setupTest(t)
-	handler := handlers.NewListHistory(storage)
+	client := setupTest(t)
+	handler := handlers.NewListHistory(client)
 
 	expectedOrders := models.OrdersSliceStorage{
 		models.NewOrder(2, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -185,7 +154,17 @@ func TestListHistory_Execute_integration(t *testing.T) {
 	}
 
 	for i := range expectedOrders {
-		err := storage.CreateOrder(t.Context(), expectedOrders[i])
+		req := &pb.TReqAcceptOrder{
+			ID:                  expectedOrders[i].ID,
+			UserID:              expectedOrders[i].UserID,
+			StorageDurationDays: 10,
+			Weight:              expectedOrders[i].Weight,
+			Cost:                "100",
+			Package:             string(expectedOrders[i].Package),
+			ExtraPackage:        string(expectedOrders[i].ExtraPackage),
+		}
+
+		_, err := client.CreateOrder(t.Context(), req)
 		assert.NoError(t, err)
 	}
 
@@ -244,8 +223,8 @@ func TestListHistory_Execute_integration(t *testing.T) {
 
 func TestListOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewListOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewListOrder(client)
 
 		expectedOrders := models.OrdersSliceStorage{
 			models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -253,7 +232,17 @@ func TestListOrder_Execute_integration(t *testing.T) {
 		}
 
 		for i := range expectedOrders {
-			err := storage.CreateOrder(t.Context(), expectedOrders[i])
+			req := &pb.TReqAcceptOrder{
+				ID:                  expectedOrders[i].ID,
+				UserID:              expectedOrders[i].UserID,
+				StorageDurationDays: 10,
+				Weight:              expectedOrders[i].Weight,
+				Cost:                "100",
+				Package:             string(expectedOrders[i].Package),
+				ExtraPackage:        string(expectedOrders[i].ExtraPackage),
+			}
+
+			_, err := client.CreateOrder(t.Context(), req)
 			assert.NoError(t, err)
 		}
 
@@ -276,8 +265,8 @@ func TestListOrder_Execute_integration(t *testing.T) {
 	})
 
 	t.Run("invalid query parameters", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewListOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewListOrder(client)
 
 		testCases := []struct {
 			name       string
@@ -310,8 +299,8 @@ func TestListOrder_Execute_integration(t *testing.T) {
 
 func TestListReturn_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewListReturn(storage)
+		client := setupTest(t)
+		handler := handlers.NewListReturn(client)
 
 		expectedOrders := models.OrdersSliceStorage{
 			models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -319,13 +308,31 @@ func TestListReturn_Execute_integration(t *testing.T) {
 		}
 
 		for i := range expectedOrders {
-			err := storage.CreateOrder(t.Context(), expectedOrders[i])
+			req := &pb.TReqAcceptOrder{
+				ID:                  expectedOrders[i].ID,
+				UserID:              expectedOrders[i].UserID,
+				StorageDurationDays: 36500,
+				Weight:              expectedOrders[i].Weight,
+				Cost:                "100",
+				Package:             string(expectedOrders[i].Package),
+				ExtraPackage:        string(expectedOrders[i].ExtraPackage),
+			}
+
+			_, err := client.CreateOrder(t.Context(), req)
 			assert.NoError(t, err)
 
-			_, err = storage.IssueOrders(t.Context(), []int64{expectedOrders[i].ID})
+			reqIssue := &pb.TReqIssueOrder{
+				Ids: []int64{expectedOrders[i].ID},
+			}
+			_, err = client.IssueOrder(t.Context(), reqIssue)
 			assert.NoError(t, err)
 
-			_, err = storage.ReturnOrder(t.Context(), expectedOrders[i].ID, expectedOrders[i].UserID)
+			reqReturn := &pb.TReqReturnOrder{
+				OrderID: expectedOrders[i].ID,
+				UserID:  expectedOrders[i].UserID,
+			}
+
+			_, err = client.ReturnOrder(t.Context(), reqReturn)
 			assert.NoError(t, err)
 		}
 
@@ -348,8 +355,8 @@ func TestListReturn_Execute_integration(t *testing.T) {
 	})
 
 	t.Run("invalid query parameters", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewListReturn(storage)
+		client := setupTest(t)
+		handler := handlers.NewListReturn(client)
 
 		testCases := []struct {
 			name       string
@@ -380,14 +387,28 @@ func TestListReturn_Execute_integration(t *testing.T) {
 
 func TestReturnOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewReturnOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewReturnOrder(client)
 
 		expectedOrder := models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
-		err := storage.CreateOrder(t.Context(), expectedOrder)
+		reqCreate := &pb.TReqAcceptOrder{
+			ID:                  expectedOrder.ID,
+			UserID:              expectedOrder.UserID,
+			StorageDurationDays: 36500,
+			Weight:              expectedOrder.Weight,
+			Cost:                "100",
+			Package:             string(expectedOrder.Package),
+			ExtraPackage:        string(expectedOrder.ExtraPackage),
+		}
+
+		_, err := client.CreateOrder(t.Context(), reqCreate)
 		assert.NoError(t, err)
-		_, err = storage.IssueOrders(t.Context(), []int64{1})
+
+		reqIssue := &pb.TReqIssueOrder{
+			Ids: []int64{expectedOrder.ID},
+		}
+		_, err = client.IssueOrder(t.Context(), reqIssue)
 		assert.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/return?order_id=1&user_id=1", nil)
@@ -408,8 +429,8 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 	})
 
 	t.Run("invalid query parameters", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewReturnOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewReturnOrder(client)
 
 		testCases := []struct {
 			name       string
@@ -437,9 +458,9 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 		}
 	})
 
-	t.Run("storage error", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewReturnOrder(storage)
+	t.Run("client error", func(t *testing.T) {
+		client := setupTest(t)
+		handler := handlers.NewReturnOrder(client)
 
 		req := httptest.NewRequest(http.MethodGet, "/return?order_id=1&user_id=1", nil)
 		w := httptest.NewRecorder()
@@ -455,13 +476,23 @@ func TestReturnOrder_Execute_integration(t *testing.T) {
 
 func TestWithdrawOrder_Execute_integration(t *testing.T) {
 	t.Run("successful execution", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewWithdrawOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewWithdrawOrder(client)
 
 		date := models.DefaultTime.Add(-480 * time.Hour)
 		expectedOrder := models.NewOrder(1, 1, 10, date, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
-		err := storage.CreateOrder(t.Context(), expectedOrder)
+		reqCreate := &pb.TReqAcceptOrder{
+			ID:                  expectedOrder.ID,
+			UserID:              expectedOrder.UserID,
+			StorageDurationDays: 10,
+			Weight:              expectedOrder.Weight,
+			Cost:                "100",
+			Package:             string(expectedOrder.Package),
+			ExtraPackage:        string(expectedOrder.ExtraPackage),
+		}
+
+		_, err := client.CreateOrder(t.Context(), reqCreate)
 		assert.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/withdraw?order_id=1", nil)
@@ -482,8 +513,8 @@ func TestWithdrawOrder_Execute_integration(t *testing.T) {
 	})
 
 	t.Run("invalid query parameters", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewWithdrawOrder(storage)
+		client := setupTest(t)
+		handler := handlers.NewWithdrawOrder(client)
 
 		testCases := []struct {
 			name       string
@@ -509,9 +540,9 @@ func TestWithdrawOrder_Execute_integration(t *testing.T) {
 		}
 	})
 
-	t.Run("storage error", func(t *testing.T) {
-		storage := setupTest(t)
-		handler := handlers.NewWithdrawOrder(storage)
+	t.Run("client error", func(t *testing.T) {
+		client := setupTest(t)
+		handler := handlers.NewWithdrawOrder(client)
 
 		req := httptest.NewRequest(http.MethodGet, "/withdraw?order_id=1", nil)
 		w := httptest.NewRecorder()

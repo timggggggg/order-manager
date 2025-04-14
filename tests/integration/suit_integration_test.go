@@ -13,27 +13,18 @@ import (
 	"github.com/stretchr/testify/suite"
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
-
-type Storage interface {
-	handlers.AcceptStorage
-	handlers.ReturnStorage
-	handlers.IssueStorage
-	handlers.WithdrawStorage
-	handlers.ListOrderStorage
-	handlers.ListReturnStorage
-	handlers.ListHistoryStorage
-}
 
 type AcceptOrderTestSuite struct {
 	suite.Suite
-	storage Storage
+	client  pb.OrderServiceClient
 	handler *handlers.AcceptOrder
 }
 
 func (suite *AcceptOrderTestSuite) SetupTest() {
-	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewAcceptOrder(suite.storage)
+	suite.client = setupTest(suite.T())
+	suite.handler = handlers.NewAcceptOrder(suite.client)
 }
 
 func (suite *AcceptOrderTestSuite) TestSuccessfulExecution() {
@@ -76,13 +67,13 @@ func TestAcceptOrderTestSuite(t *testing.T) {
 
 type IssueOrderTestSuite struct {
 	suite.Suite
-	storage Storage
+	client  pb.OrderServiceClient
 	handler *handlers.IssueOrder
 }
 
 func (suite *IssueOrderTestSuite) SetupTest() {
-	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewIssueOrder(suite.storage)
+	suite.client = setupTest(suite.T())
+	suite.handler = handlers.NewIssueOrder(suite.client)
 }
 
 func (suite *IssueOrderTestSuite) TestSuccessfulExecution() {
@@ -93,7 +84,17 @@ func (suite *IssueOrderTestSuite) TestSuccessfulExecution() {
 	}
 
 	for i := range expectedOrders {
-		err := suite.storage.CreateOrder(suite.T().Context(), expectedOrders[i])
+		req := &pb.TReqAcceptOrder{
+			ID:                  expectedOrders[i].ID,
+			UserID:              expectedOrders[i].UserID,
+			StorageDurationDays: 36500,
+			Weight:              expectedOrders[i].Weight,
+			Cost:                "100",
+			Package:             string(expectedOrders[i].Package),
+			ExtraPackage:        string(expectedOrders[i].ExtraPackage),
+		}
+
+		_, err := suite.client.CreateOrder(suite.T().Context(), req)
 		assert.NoError(suite.T(), err)
 	}
 
@@ -147,13 +148,13 @@ func TestIssueOrderTestSuite(t *testing.T) {
 
 type ListHistoryTestSuite struct {
 	suite.Suite
-	storage Storage
+	client  pb.OrderServiceClient
 	handler *handlers.ListHistory
 }
 
 func (suite *ListHistoryTestSuite) SetupTest() {
-	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewListHistory(suite.storage)
+	suite.client = setupTest(suite.T())
+	suite.handler = handlers.NewListHistory(suite.client)
 
 	expectedOrders := models.OrdersSliceStorage{
 		models.NewOrder(2, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -161,7 +162,17 @@ func (suite *ListHistoryTestSuite) SetupTest() {
 	}
 
 	for i := range expectedOrders {
-		err := suite.storage.CreateOrder(suite.T().Context(), expectedOrders[i])
+		req := &pb.TReqAcceptOrder{
+			ID:                  expectedOrders[i].ID,
+			UserID:              expectedOrders[i].UserID,
+			StorageDurationDays: 10,
+			Weight:              expectedOrders[i].Weight,
+			Cost:                "100",
+			Package:             string(expectedOrders[i].Package),
+			ExtraPackage:        string(expectedOrders[i].ExtraPackage),
+		}
+
+		_, err := suite.client.CreateOrder(suite.T().Context(), req)
 		assert.NoError(suite.T(), err)
 	}
 }
@@ -226,13 +237,13 @@ func TestListHistoryTestSuite(t *testing.T) {
 
 type ListOrderTestSuite struct {
 	suite.Suite
-	storage Storage
+	client  pb.OrderServiceClient
 	handler *handlers.ListOrder
 }
 
 func (suite *ListOrderTestSuite) SetupTest() {
-	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewListOrder(suite.storage)
+	suite.client = setupTest(suite.T())
+	suite.handler = handlers.NewListOrder(suite.client)
 
 	expectedOrders := models.OrdersSliceStorage{
 		models.NewOrder(1, 1, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -240,7 +251,18 @@ func (suite *ListOrderTestSuite) SetupTest() {
 	}
 
 	for i := range expectedOrders {
-		err := suite.storage.CreateOrder(suite.T().Context(), expectedOrders[i])
+		req := &pb.TReqAcceptOrder{
+			ID:                  expectedOrders[i].ID,
+			UserID:              expectedOrders[i].UserID,
+			StorageDurationDays: 10,
+			Weight:              expectedOrders[i].Weight,
+			Cost:                "100",
+			Package:             string(expectedOrders[i].Package),
+			ExtraPackage:        string(expectedOrders[i].ExtraPackage),
+		}
+
+		_, err := suite.client.CreateOrder(suite.T().Context(), req)
+
 		assert.NoError(suite.T(), err)
 	}
 }
@@ -301,13 +323,13 @@ func TestListOrderTestSuite(t *testing.T) {
 
 type ListReturnTestSuite struct {
 	suite.Suite
-	storage Storage
+	client  pb.OrderServiceClient
 	handler *handlers.ListReturn
 }
 
 func (suite *ListReturnTestSuite) SetupTest() {
-	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewListReturn(suite.storage)
+	suite.client = setupTest(suite.T())
+	suite.handler = handlers.NewListReturn(suite.client)
 
 	expectedOrders := models.OrdersSliceStorage{
 		models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
@@ -315,13 +337,31 @@ func (suite *ListReturnTestSuite) SetupTest() {
 	}
 
 	for i := range expectedOrders {
-		err := suite.storage.CreateOrder(suite.T().Context(), expectedOrders[i])
+		req := &pb.TReqAcceptOrder{
+			ID:                  expectedOrders[i].ID,
+			UserID:              expectedOrders[i].UserID,
+			StorageDurationDays: 36500,
+			Weight:              expectedOrders[i].Weight,
+			Cost:                "100",
+			Package:             string(expectedOrders[i].Package),
+			ExtraPackage:        string(expectedOrders[i].ExtraPackage),
+		}
+
+		_, err := suite.client.CreateOrder(suite.T().Context(), req)
 		assert.NoError(suite.T(), err)
 
-		_, err = suite.storage.IssueOrders(suite.T().Context(), []int64{expectedOrders[i].ID})
+		reqIssue := &pb.TReqIssueOrder{
+			Ids: []int64{expectedOrders[i].ID},
+		}
+		_, err = suite.client.IssueOrder(suite.T().Context(), reqIssue)
 		assert.NoError(suite.T(), err)
 
-		_, err = suite.storage.ReturnOrder(suite.T().Context(), expectedOrders[i].ID, expectedOrders[i].UserID)
+		reqReturn := &pb.TReqReturnOrder{
+			OrderID: expectedOrders[i].ID,
+			UserID:  expectedOrders[i].UserID,
+		}
+
+		_, err = suite.client.ReturnOrder(suite.T().Context(), reqReturn)
 		assert.NoError(suite.T(), err)
 	}
 }
@@ -380,22 +420,35 @@ func TestListReturnTestSuite(t *testing.T) {
 
 type ReturnOrderTestSuite struct {
 	suite.Suite
-	storage Storage
+	client  pb.OrderServiceClient
 	handler *handlers.ReturnOrder
 }
 
 func (suite *ReturnOrderTestSuite) SetupTest() {
-	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewReturnOrder(suite.storage)
+	suite.client = setupTest(suite.T())
+	suite.handler = handlers.NewReturnOrder(suite.client)
 }
 
 func (suite *ReturnOrderTestSuite) TestSuccessfulExecution() {
 	expectedOrder := models.NewOrder(1, 1, 36500, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
-	err := suite.storage.CreateOrder(suite.T().Context(), expectedOrder)
+	reqCreate := &pb.TReqAcceptOrder{
+		ID:                  expectedOrder.ID,
+		UserID:              expectedOrder.UserID,
+		StorageDurationDays: 36500,
+		Weight:              expectedOrder.Weight,
+		Cost:                "100",
+		Package:             string(expectedOrder.Package),
+		ExtraPackage:        string(expectedOrder.ExtraPackage),
+	}
+
+	_, err := suite.client.CreateOrder(suite.T().Context(), reqCreate)
 	assert.NoError(suite.T(), err)
 
-	_, err = suite.storage.IssueOrders(suite.T().Context(), []int64{1})
+	reqIssue := &pb.TReqIssueOrder{
+		Ids: []int64{expectedOrder.ID},
+	}
+	_, err = suite.client.IssueOrder(suite.T().Context(), reqIssue)
 	assert.NoError(suite.T(), err)
 
 	req := httptest.NewRequest(http.MethodGet, "/return?order_id=1&user_id=1", nil)
@@ -462,20 +515,30 @@ func TestReturnOrderTestSuite(t *testing.T) {
 
 type WithdrawOrderTestSuite struct {
 	suite.Suite
-	storage Storage
+	client  pb.OrderServiceClient
 	handler *handlers.WithdrawOrder
 }
 
 func (suite *WithdrawOrderTestSuite) SetupTest() {
-	suite.storage = setupTest(suite.T())
-	suite.handler = handlers.NewWithdrawOrder(suite.storage)
+	suite.client = setupTest(suite.T())
+	suite.handler = handlers.NewWithdrawOrder(suite.client)
 }
 
 func (suite *WithdrawOrderTestSuite) TestSuccessfulExecution() {
 	date := models.DefaultTime.Add(-480 * time.Hour)
 	expectedOrder := models.NewOrder(1, 1, 10, date, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault)
 
-	err := suite.storage.CreateOrder(suite.T().Context(), expectedOrder)
+	reqCreate := &pb.TReqAcceptOrder{
+		ID:                  expectedOrder.ID,
+		UserID:              expectedOrder.UserID,
+		StorageDurationDays: 36500,
+		Weight:              expectedOrder.Weight,
+		Cost:                "100",
+		Package:             string(expectedOrder.Package),
+		ExtraPackage:        string(expectedOrder.ExtraPackage),
+	}
+
+	_, err := suite.client.CreateOrder(suite.T().Context(), reqCreate)
 	assert.NoError(suite.T(), err)
 
 	req := httptest.NewRequest(http.MethodGet, "/withdraw?order_id=1", nil)

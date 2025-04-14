@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers/mock"
 	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
 func TestListOrder_Execute(t *testing.T) {
@@ -19,8 +20,8 @@ func TestListOrder_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("success", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewListOrder(mockOrderServiceClient)
 
 		userID := int64(1)
 		limit := int64(10)
@@ -31,9 +32,9 @@ func TestListOrder_Execute(t *testing.T) {
 			models.NewOrder(3, 3, 10, models.DefaultTime, 12.3, models.NewMoneyFromInt(100, 0), models.PackagingFilm, models.PackagingDefault),
 		}
 
-		mockStorage.EXPECT().
-			GetByUserIDCursorPagination(gomock.Any(), userID, limit, cursorID).
-			Return(expectedOrders, nil)
+		mockOrderServiceClient.EXPECT().
+			ListOrders(gomock.Any(), &pb.TReqListOrders{UserID: userID, Limit: limit, CursorID: cursorID}).
+			Return(&pb.TListResp{Orders: models.OrdersSliceModelToProto(expectedOrders)}, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/?user_id="+strconv.FormatInt(userID, 10)+"&limit="+strconv.FormatInt(limit, 10)+"&cursor_id="+strconv.FormatInt(cursorID, 10), nil)
 		w := httptest.NewRecorder()
@@ -48,8 +49,8 @@ func TestListOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("bad request - missing user_id", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewListOrder(mockOrderServiceClient)
 
 		req := httptest.NewRequest(http.MethodGet, "/?limit=10&cursor_id=0", nil)
 		w := httptest.NewRecorder()
@@ -60,15 +61,15 @@ func TestListOrder_Execute(t *testing.T) {
 	})
 
 	t.Run("internal server error", func(t *testing.T) {
-		mockStorage := mock.NewMockStorage(ctrl)
-		handler := NewListOrder(mockStorage)
+		mockOrderServiceClient := mock.NewMockOrderServiceClient(ctrl)
+		handler := NewListOrder(mockOrderServiceClient)
 
 		userID := int64(1)
 		limit := int64(10)
 		cursorID := int64(0)
 
-		mockStorage.EXPECT().
-			GetByUserIDCursorPagination(gomock.Any(), userID, limit, cursorID).
+		mockOrderServiceClient.EXPECT().
+			ListOrders(gomock.Any(), &pb.TReqListOrders{UserID: userID, Limit: limit, CursorID: cursorID}).
 			Return(nil, errors.New("storage error"))
 
 		req := httptest.NewRequest(http.MethodGet, "/?user_id="+strconv.FormatInt(userID, 10)+"&limit="+strconv.FormatInt(limit, 10)+"&cursor_id="+strconv.FormatInt(cursorID, 10), nil)

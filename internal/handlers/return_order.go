@@ -1,31 +1,23 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
-	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
-	"gitlab.ozon.dev/timofey15g/homework/internal/models"
+	pb "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
-type ReturnStorage interface {
-	ReturnOrder(ctx context.Context, orderID int64, userID int64) (order *models.Order, err error)
-}
-
 type ReturnOrder struct {
-	strg ReturnStorage
+	client pb.OrderServiceClient
 }
 
-func NewReturnOrder(strg ReturnStorage) *ReturnOrder {
-	return &ReturnOrder{strg}
+func NewReturnOrder(client pb.OrderServiceClient) *ReturnOrder {
+	return &ReturnOrder{client}
 }
 
 func (cmd *ReturnOrder) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logPipeline := logpipeline.GetLogPipelineInstance()
 
 	orderIDstr := r.URL.Query().Get("order_id")
 	if orderIDstr == "" {
@@ -51,16 +43,17 @@ func (cmd *ReturnOrder) Execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := cmd.strg.ReturnOrder(ctx, orderID, userID)
+	req := &pb.TReqReturnOrder{
+		OrderID: orderID,
+		UserID:  userID,
+	}
+
+	resp, err := cmd.client.ReturnOrder(ctx, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(order)
-	if err != nil {
-		return
-	}
-
-	logPipeline.LogStatusChange(time.Now(), order.ID, models.StatusIssued, models.StatusReturned)
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprint(w, resp.Msg)
 }

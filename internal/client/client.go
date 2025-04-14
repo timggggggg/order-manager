@@ -1,4 +1,4 @@
-package service
+package client
 
 import (
 	"bytes"
@@ -12,29 +12,15 @@ import (
 
 	"gitlab.ozon.dev/timofey15g/homework/internal/handlers"
 	logpipeline "gitlab.ozon.dev/timofey15g/homework/internal/log_pipeline"
+	desc "gitlab.ozon.dev/timofey15g/homework/pkg/service"
 )
 
-type Storage interface {
-	handlers.AcceptStorage
-	handlers.ReturnStorage
-	handlers.IssueStorage
-	handlers.WithdrawStorage
-	handlers.ListOrderStorage
-	handlers.ListReturnStorage
-	handlers.ListHistoryStorage
-}
-
-type Outbox interface {
-	RenewTask(w http.ResponseWriter, r *http.Request)
-}
-
 type App struct {
-	storage Storage
-	outbox  Outbox
+	client desc.OrderServiceClient
 }
 
-func NewApp(storage Storage, outbox Outbox) *App {
-	return &App{storage, outbox}
+func NewApp(client desc.OrderServiceClient) *App {
+	return &App{client: client}
 }
 
 type Handler interface {
@@ -43,13 +29,14 @@ type Handler interface {
 
 func (app *App) Run() {
 	hs := map[string]Handler{
-		"accept":       handlers.NewAcceptOrder(app.storage),
-		"return":       handlers.NewReturnOrder(app.storage),
-		"issue":        handlers.NewIssueOrder(app.storage),
-		"withdraw":     handlers.NewWithdrawOrder(app.storage),
-		"list_order":   handlers.NewListOrder(app.storage),
-		"list_return":  handlers.NewListReturn(app.storage),
-		"list_history": handlers.NewListHistory(app.storage),
+		"accept":       handlers.NewAcceptOrder(app.client),
+		"return":       handlers.NewReturnOrder(app.client),
+		"issue":        handlers.NewIssueOrder(app.client),
+		"withdraw":     handlers.NewWithdrawOrder(app.client),
+		"list_order":   handlers.NewListOrder(app.client),
+		"list_return":  handlers.NewListReturn(app.client),
+		"list_history": handlers.NewListHistory(app.client),
+		"renew_task":   handlers.NewRenewTask(app.client),
 	}
 	router := mux.NewRouter()
 
@@ -61,7 +48,7 @@ func (app *App) Run() {
 	router.HandleFunc("/orders/returns", hs["list_return"].Execute).Methods(http.MethodGet)
 	router.HandleFunc("/orders", hs["list_history"].Execute).Methods(http.MethodGet)
 
-	router.HandleFunc("/tasks/reset", app.outbox.RenewTask).Methods(http.MethodPost)
+	router.HandleFunc("/tasks/reset", hs["renew_task"].Execute).Methods(http.MethodPost)
 
 	router.Use(authMiddleware)
 
@@ -73,8 +60,8 @@ func authMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()
 
-		serverUser := os.Getenv("SERVER_USER")
-		serverPassword := os.Getenv("SERVER_PASSWORD")
+		serverUser := os.Getenv("CLIENT_SERVER_USER")
+		serverPassword := os.Getenv("CLIENT_SERVER_PASSWORD")
 
 		if !ok || user != serverUser || password != serverPassword {
 			w.WriteHeader(http.StatusUnauthorized)
