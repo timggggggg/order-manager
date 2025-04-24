@@ -1,5 +1,6 @@
 cmd/storage.json
-app
+client
+server
 cmd/server/.env
 build/db/.env_db
 internal/handlers/.env

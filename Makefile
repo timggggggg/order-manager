@@ -1,21 +1,30 @@
-BINARY_NAME=app
+SERVER_BINARY_NAME=server
+CLIENT_BINARY_NAME=client
 
-MAIN_FILE=./cmd/server/main.go
+SERVER_MAIN_FILE=./cmd/server/main.go
+CLIENT_MAIN_FILE=./cmd/client/main.go
 
-all: run
+all: run-server
 
-run: build
-	./$(BINARY_NAME)
+run-server: build-server
+	./$(SERVER_BINARY_NAME)
 
-build: deps
-	go build -o $(BINARY_NAME) $(MAIN_FILE)
+client: build-client
+	./$(CLIENT_BINARY_NAME)
+
+build-server: deps
+	go build -o $(SERVER_BINARY_NAME) $(SERVER_MAIN_FILE)
+
+build-client: deps
+	go build -o $(CLIENT_BINARY_NAME) $(CLIENT_MAIN_FILE)
 
 deps:
 	go mod tidy
 	go mod download
 
 clean:
-	rm -f $(BINARY_NAME)
+	rm -f $(SERVER_BINARY_NAME)
+	rm -f $(CLIENT_BINARY_NAME)
 
 lint: 
 	golangci-lint run
@@ -45,4 +54,4 @@ genproto:
 	--go-grpc_out=./pkg --go-grpc_opt=paths=source_relative \
 	proto/api/api.proto proto/service/service.proto
 
-.PHONY: all run build deps clean lint test genproto
+.PHONY: all run build deps clean lint test genproto client

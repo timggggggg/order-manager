@@ -52,7 +52,7 @@ func (app *App) Run() {
 
 	router.Use(authMiddleware)
 
-	log.Println("Server is running on port 9000...")
+	log.Println("Client server is running on port 9000...")
 	log.Fatal(http.ListenAndServe(":9000", router))
 }
 
